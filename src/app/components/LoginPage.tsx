@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package } from 'lucide-react';
+import { Carrot } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface LoginPageProps {
@@ -19,11 +19,14 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mb-4">
-            <Package className="w-10 h-10 text-white" />
+          <div className="w-20 h-20 bg-orange-500 rounded-3xl flex items-center justify-center mb-6 shadow-lg shadow-orange-100 rotate-3 hover:rotate-0 transition-transform duration-300">
+            <Carrot className="w-12 h-12 text-white" />
           </div>
-          <h1 className="text-2xl">FruitVeg Admin Portal</h1>
-          <p className="text-gray-600 mt-2">Sign in to manage your platform</p>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight text-center uppercase font-serif italic">Simply Veggie</h1>
+          <p className="text-sm italic text-gray-500 mt-1 font-serif">your kitchen partner</p>
+          <div className="mt-4 text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center">
+            FUTURE VEGGIES INDIA PRIVATE LIMITED
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -60,8 +63,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
             <p className="text-xs text-gray-600 text-center">
-              Demo Credentials:<br/>
-              Email: admin@example.com<br/>
+              Demo Credentials:<br />
+              Email: admin@example.com<br />
               Password: 12345678
             </p>
           </div>

@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useAdmin, type PriceTier, type PricingRule, type AdjustmentType } from '../context/AdminContext';
-import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, Package, Tag, Layers, DollarSign, Percent, Lock } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, Package, Tag, Layers, DollarSign, Percent, Lock, AlertTriangle, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { calculateEffectivePrice, getTierCoverage, formatRuleDescription, isSkuVisible as checkSkuVisible } from '../utils/pricingUtils';
 
-type TierTab = 'visibility' | 'rules';
+type TierTab = 'audit' | 'visibility' | 'rules';
 
 export function PricingTiersPage() {
     const {
@@ -15,7 +16,7 @@ export function PricingTiersPage() {
     const [showForm, setShowForm] = useState(false);
     const [editingTier, setEditingTier] = useState<PriceTier | null>(null);
     const [expandedTier, setExpandedTier] = useState<string | null>(null);
-    const [tierTab, setTierTab] = useState<TierTab>('visibility');
+    const [tierTab, setTierTab] = useState<TierTab>('audit');
 
     // Form state for tier
     const [formData, setFormData] = useState({ name: '', description: '' });
@@ -107,6 +108,20 @@ export function PricingTiersPage() {
         setShowRuleForm(true);
     };
 
+    // Quick add rule with pre-populated level and target
+    const quickAddRule = (tierId: string, level: 'category' | 'subcategory' | 'sku', targetId: string) => {
+        setRuleFormTierId(tierId);
+        setRuleFormData({
+            level,
+            targetId,
+            adjustmentType: 'fixed',
+            adjustmentOp: 'add',
+            adjustmentValue: 0,
+        });
+        setEditingRule(null);
+        setShowRuleForm(true);
+    };
+
     const handleEditRule = (rule: PricingRule) => {
         setRuleFormTierId(rule.tierId);
         setRuleFormData({
@@ -156,15 +171,6 @@ export function PricingTiersPage() {
         setFn(newSet);
     };
 
-    const getVisibleSkuCount = (tier: PriceTier) => {
-        const catIds = new Set(tier.includedCategoryIds || []);
-        const subIds = new Set(tier.includedSubcategoryIds || []);
-        const skuIds = new Set(tier.includedSkuIds || []);
-        return inventory.filter(item =>
-            catIds.has(item.categoryId) || subIds.has(item.subcategoryId) || skuIds.has(item.id)
-        ).length;
-    };
-
     const getTierRules = (tierId: string) => pricingRules.filter(r => r.tierId === tierId);
 
     const getTargetName = (level: string, targetId: string) => {
@@ -180,12 +186,105 @@ export function PricingTiersPage() {
         return `Base ${sign} ${unit === '₹' ? '₹' : ''}${rule.adjustmentValue}${unit === '%' ? '%' : ''}`;
     };
 
+    // Compute coverage for a tier
+    const computeCoverage = (tier: PriceTier) => {
+        const visibility = {
+            includedCategoryIds: tier.includedCategoryIds || [],
+            includedSubcategoryIds: tier.includedSubcategoryIds || [],
+            includedSkuIds: tier.includedSkuIds || [],
+        };
+        const skuInfos = inventory.map(item => {
+            const bp = item.basePrice;
+            const firstPrice = (bp && typeof bp === 'object') ? (bp[Object.keys(bp)[0]] || 0) : 0;
+            return {
+                id: item.id,
+                categoryId: item.categoryId,
+                subcategoryId: item.subcategoryId,
+                basePrice: firstPrice,
+            };
+        });
+        return getTierCoverage(skuInfos, tier.id, visibility, pricingRules);
+    };
+
+    // Get orphaned rules for a tier
+    const getOrphanedRules = (tier: PriceTier) => {
+        const visibility = {
+            includedCategoryIds: tier.includedCategoryIds || [],
+            includedSubcategoryIds: tier.includedSubcategoryIds || [],
+            includedSkuIds: tier.includedSkuIds || [],
+        };
+        return pricingRules.filter(r => {
+            if (r.tierId !== tier.id) return false;
+            if (r.level === 'category') return !visibility.includedCategoryIds.includes(r.targetId);
+            if (r.level === 'subcategory') return !visibility.includedSubcategoryIds.includes(r.targetId);
+            if (r.level === 'sku') return !visibility.includedSkuIds.includes(r.targetId);
+            return false;
+        });
+    };
+
+    // Check if a category/subcategory has a rule for this tier
+    const hasRuleFor = (tierId: string, level: string, targetId: string) => {
+        return pricingRules.some(r => r.tierId === tierId && r.level === level && r.targetId === targetId);
+    };
+
     // Targets for rule form
     const ruleTargets = useMemo(() => {
         if (ruleFormData.level === 'category') return categories;
         if (ruleFormData.level === 'subcategory') return subcategories;
         return inventory;
     }, [ruleFormData.level, categories, subcategories, inventory]);
+
+    // Compute audit data for a tier - only SKUs that are visible OR have a rule
+    const computeAuditData = (tier: PriceTier) => {
+        const visibility = {
+            includedCategoryIds: tier.includedCategoryIds || [],
+            includedSubcategoryIds: tier.includedSubcategoryIds || [],
+            includedSkuIds: tier.includedSkuIds || [],
+        };
+
+        const tierRulesLocal = pricingRules.filter(r => r.tierId === tier.id);
+
+        return inventory.map(item => {
+            const bp = item.basePrice;
+            const firstPrice = (bp && typeof bp === 'object') ? (bp[Object.keys(bp)[0]] || 0) : 0;
+            const skuInfo = {
+                id: item.id,
+                categoryId: item.categoryId,
+                subcategoryId: item.subcategoryId,
+                basePrice: firstPrice,
+            };
+            const result = calculateEffectivePrice(skuInfo, tier.id, visibility, pricingRules);
+            // Format the rule
+            let ruleFormula = '-';
+            if (result.ruleApplied) {
+                const r = result.ruleApplied;
+                if (r.adjustmentType === 'constant') {
+                    ruleFormula = `₹${r.adjustmentValue}`;
+                } else {
+                    const sign = r.adjustmentOp === 'add' ? '+' : '-';
+                    const unit = r.adjustmentType === 'percent' ? '%' : '₹';
+                    ruleFormula = `Base ${sign}${unit === '₹' ? '₹' : ''}${r.adjustmentValue}${unit === '%' ? '%' : ''}`;
+                }
+            }
+            return {
+                ...item,
+                ...result,
+                basePriceNum: firstPrice,
+                ruleFormula,
+                categoryName: categories.find(c => c.id === item.categoryId)?.name || '-',
+            };
+        }).filter(row => row.isVisible || row.hasRule); // Only show relevant SKUs
+    };
+
+    // Get visible SKU count
+    const getVisibleSkuCount = (tier: PriceTier) => {
+        const catIds = new Set(tier.includedCategoryIds || []);
+        const subIds = new Set(tier.includedSubcategoryIds || []);
+        const skuIds = new Set(tier.includedSkuIds || []);
+        return inventory.filter(item =>
+            catIds.has(item.categoryId) || subIds.has(item.subcategoryId) || skuIds.has(item.id)
+        ).length;
+    };
 
     return (
         <div>
@@ -207,7 +306,7 @@ export function PricingTiersPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <p className="text-sm text-blue-800">
                     <strong>Tier = Commercial Contract.</strong> Controls visibility + pricing adjustments.
-                    Priority: SKU Rule &gt; Subcategory Rule &gt; Category Rule.
+                    Priority: SKU Rule &gt; Subcategory Rule &gt; Category Rule &gt; Base Price.
                 </p>
             </div>
 
@@ -220,14 +319,16 @@ export function PricingTiersPage() {
                 ) : (
                     priceTiers.map(tier => {
                         const isExpanded = expandedTier === tier.id;
-                        const visibleSkus = getVisibleSkuCount(tier);
                         const tierRules = getTierRules(tier.id);
+                        const coverage = computeCoverage(tier);
+                        const orphanedRules = getOrphanedRules(tier);
+                        const coveragePercent = coverage.visibleCount > 0 ? Math.round((coverage.coveredCount / coverage.visibleCount) * 100) : 0;
 
                         return (
                             <div key={tier.id} className="bg-white rounded-lg shadow-sm border overflow-hidden">
                                 <div
                                     className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
-                                    onClick={() => { setExpandedTier(isExpanded ? null : tier.id); setTierTab('visibility'); }}
+                                    onClick={() => { setExpandedTier(isExpanded ? null : tier.id); setTierTab('audit'); }}
                                 >
                                     <div className="flex items-center gap-3">
                                         <button className="text-gray-400">
@@ -239,10 +340,25 @@ export function PricingTiersPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4">
+                                        {/* Coverage Badge - only show if there are visible SKUs */}
+                                        {coverage.visibleCount > 0 && (
+                                            <div className={`px-3 py-1 rounded-full text-xs font-medium ${coveragePercent === 100 ? 'bg-green-100 text-green-700' :
+                                                coveragePercent >= 80 ? 'bg-yellow-100 text-yellow-700' :
+                                                    'bg-red-100 text-red-700'
+                                                }`}>
+                                                {coverage.coveredCount}/{coverage.visibleCount} covered ({coveragePercent}%)
+                                            </div>
+                                        )}
+                                        {orphanedRules.length > 0 && (
+                                            <div className="flex items-center gap-1 text-amber-600 text-xs">
+                                                <AlertTriangle className="w-3 h-3" />
+                                                {orphanedRules.length} orphaned
+                                            </div>
+                                        )}
                                         <div className="text-right">
-                                            <div className="text-sm font-medium text-gray-900">{visibleSkus} SKUs • {tierRules.length} rules</div>
+                                            <div className="text-sm font-medium text-gray-900">{getVisibleSkuCount(tier)} SKUs visible</div>
                                             <div className="text-xs text-gray-500">
-                                                {(tier.includedCategoryIds?.length || 0)} cats, {(tier.includedSubcategoryIds?.length || 0)} subs
+                                                {(tier.includedCategoryIds?.length || 0)} cats, {(tier.includedSubcategoryIds?.length || 0)} subs, {(tier.includedSkuIds?.length || 0)} explicit
                                             </div>
                                         </div>
                                         <button
@@ -259,6 +375,12 @@ export function PricingTiersPage() {
                                         {/* Tabs */}
                                         <div className="flex border-b bg-gray-50">
                                             <button
+                                                onClick={() => setTierTab('audit')}
+                                                className={`px-4 py-2 text-sm font-medium flex items-center gap-1 ${tierTab === 'audit' ? 'border-b-2 border-green-600 text-green-600 bg-white' : 'text-gray-600'}`}
+                                            >
+                                                <Eye className="w-4 h-4" /> Audit
+                                            </button>
+                                            <button
                                                 onClick={() => setTierTab('visibility')}
                                                 className={`px-4 py-2 text-sm font-medium ${tierTab === 'visibility' ? 'border-b-2 border-green-600 text-green-600 bg-white' : 'text-gray-600'}`}
                                             >
@@ -274,6 +396,75 @@ export function PricingTiersPage() {
 
                                         {/* Tab Content */}
                                         <div className="p-4">
+                                            {/* AUDIT TAB */}
+                                            {tierTab === 'audit' && (
+                                                <div>
+                                                    <p className="text-sm text-gray-600 mb-3">
+                                                        Complete catalog view with effective prices. ⚠️ = integrity issue.
+                                                    </p>
+                                                    <div className="overflow-x-auto border rounded-lg">
+                                                        <table className="w-full text-sm">
+                                                            <thead className="bg-gray-50 border-b">
+                                                                <tr>
+                                                                    <th className="text-left p-3 font-medium">SKU</th>
+                                                                    <th className="text-left p-3 font-medium">Category</th>
+                                                                    <th className="text-center p-3 font-medium">Visible</th>
+                                                                    <th className="text-left p-3 font-medium">Rule Source</th>
+                                                                    <th className="text-right p-3 font-medium">Base</th>
+                                                                    <th className="text-right p-3 font-medium">Effective</th>
+                                                                    <th className="text-center p-3 font-medium">Status</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y">
+                                                                {computeAuditData(tier).map(row => (
+                                                                    <tr key={row.id} className={row.integrityIssue !== 'none' ? 'bg-amber-50' : ''}>
+                                                                        <td className="p-3 font-medium">{row.name}</td>
+                                                                        <td className="p-3 text-gray-600">{row.categoryName}</td>
+                                                                        <td className="p-3 text-center">
+                                                                            {row.isVisible ? (
+                                                                                <CheckCircle className="w-4 h-4 text-green-600 inline" />
+                                                                            ) : (
+                                                                                <XCircle className="w-4 h-4 text-gray-400 inline" />
+                                                                            )}
+                                                                        </td>
+                                                                        <td className="p-3">
+                                                                            <span className={`text-xs px-2 py-0.5 rounded ${row.ruleSource === 'sku' ? 'bg-purple-100 text-purple-700' :
+                                                                                row.ruleSource === 'subcategory' ? 'bg-blue-100 text-blue-700' :
+                                                                                    row.ruleSource === 'category' ? 'bg-green-100 text-green-700' :
+                                                                                        'bg-gray-100 text-gray-600'
+                                                                                }`}>
+                                                                                {row.ruleSource === 'base' ? 'Base' : row.ruleSource.charAt(0).toUpperCase() + row.ruleSource.slice(1)}
+                                                                            </span>
+                                                                            <span className="ml-2 text-xs text-gray-500">{row.ruleFormula}</span>
+                                                                        </td>
+                                                                        <td className="p-3 text-right text-gray-600">₹{(row.basePriceNum || 0).toFixed(2)}</td>
+                                                                        <td className="p-3 text-right font-medium">
+                                                                            {row.isVisible ? `₹${row.price.toFixed(2)}` : '-'}
+                                                                        </td>
+                                                                        <td className="p-3 text-center">
+                                                                            {row.integrityIssue === 'visible_no_rule' && (
+                                                                                <span className="text-amber-600 flex items-center justify-center gap-1 text-xs">
+                                                                                    <AlertTriangle className="w-3 h-3" /> No rule
+                                                                                </span>
+                                                                            )}
+                                                                            {row.integrityIssue === 'rule_but_hidden' && (
+                                                                                <span className="text-amber-600 flex items-center justify-center gap-1 text-xs">
+                                                                                    <AlertTriangle className="w-3 h-3" /> Hidden
+                                                                                </span>
+                                                                            )}
+                                                                            {row.integrityIssue === 'none' && row.isVisible && (
+                                                                                <CheckCircle className="w-4 h-4 text-green-500 inline" />
+                                                                            )}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* VISIBILITY TAB */}
                                             {tierTab === 'visibility' && (
                                                 <div className="grid grid-cols-3 gap-4">
                                                     <div>
@@ -285,8 +476,18 @@ export function PricingTiersPage() {
                                                                 <span className="text-sm text-gray-400 italic">None</span>
                                                             ) : (
                                                                 (tier.includedCategoryIds || []).map(catId => (
-                                                                    <div key={catId} className="text-sm text-gray-800 bg-white px-2 py-1 rounded border">
-                                                                        {categories.find(c => c.id === catId)?.name || catId}
+                                                                    <div key={catId} className="flex items-center justify-between text-sm text-gray-800 bg-white px-2 py-1 rounded border">
+                                                                        <span>{categories.find(c => c.id === catId)?.name || catId}</span>
+                                                                        {!hasRuleFor(tier.id, 'category', catId) && (
+                                                                            <button
+                                                                                onClick={() => quickAddRule(tier.id, 'category', catId)}
+                                                                                className="flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-1 rounded text-xs"
+                                                                                title="Add pricing rule"
+                                                                            >
+                                                                                <AlertTriangle className="w-3 h-3" />
+                                                                                <Plus className="w-3 h-3" />
+                                                                            </button>
+                                                                        )}
                                                                     </div>
                                                                 ))
                                                             )}
@@ -301,8 +502,18 @@ export function PricingTiersPage() {
                                                                 <span className="text-sm text-gray-400 italic">None</span>
                                                             ) : (
                                                                 (tier.includedSubcategoryIds || []).map(subId => (
-                                                                    <div key={subId} className="text-sm text-gray-800 bg-white px-2 py-1 rounded border">
-                                                                        {subcategories.find(s => s.id === subId)?.name || subId}
+                                                                    <div key={subId} className="flex items-center justify-between text-sm text-gray-800 bg-white px-2 py-1 rounded border">
+                                                                        <span>{subcategories.find(s => s.id === subId)?.name || subId}</span>
+                                                                        {!hasRuleFor(tier.id, 'subcategory', subId) && (
+                                                                            <button
+                                                                                onClick={() => quickAddRule(tier.id, 'subcategory', subId)}
+                                                                                className="flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-1 rounded text-xs"
+                                                                                title="Add pricing rule"
+                                                                            >
+                                                                                <AlertTriangle className="w-3 h-3" />
+                                                                                <Plus className="w-3 h-3" />
+                                                                            </button>
+                                                                        )}
                                                                     </div>
                                                                 ))
                                                             )}
@@ -317,8 +528,18 @@ export function PricingTiersPage() {
                                                                 <span className="text-sm text-gray-400 italic">None</span>
                                                             ) : (
                                                                 (tier.includedSkuIds || []).map(skuId => (
-                                                                    <div key={skuId} className="text-sm text-gray-800 bg-white px-2 py-1 rounded border">
-                                                                        {inventory.find(i => i.id === skuId)?.name || skuId}
+                                                                    <div key={skuId} className="flex items-center justify-between text-sm text-gray-800 bg-white px-2 py-1 rounded border">
+                                                                        <span>{inventory.find(i => i.id === skuId)?.name || skuId}</span>
+                                                                        {!hasRuleFor(tier.id, 'sku', skuId) && (
+                                                                            <button
+                                                                                onClick={() => quickAddRule(tier.id, 'sku', skuId)}
+                                                                                className="flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50 px-1 rounded text-xs"
+                                                                                title="Add pricing rule"
+                                                                            >
+                                                                                <AlertTriangle className="w-3 h-3" />
+                                                                                <Plus className="w-3 h-3" />
+                                                                            </button>
+                                                                        )}
                                                                     </div>
                                                                 ))
                                                             )}
@@ -327,6 +548,7 @@ export function PricingTiersPage() {
                                                 </div>
                                             )}
 
+                                            {/* RULES TAB */}
                                             {tierTab === 'rules' && (
                                                 <div>
                                                     <div className="flex justify-between items-center mb-3">
@@ -341,43 +563,61 @@ export function PricingTiersPage() {
 
                                                     {tierRules.length === 0 ? (
                                                         <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg">
-                                                            No rules defined. Using base prices.
+                                                            No rules defined. Using base prices for all visible SKUs.
                                                         </div>
                                                     ) : (
                                                         <div className="space-y-2">
-                                                            {tierRules.map(rule => (
-                                                                <div key={rule.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                                                                    <div className="flex items-center gap-3">
-                                                                        {rule.adjustmentType === 'constant' ? (
-                                                                            <Lock className="w-4 h-4 text-purple-600" />
-                                                                        ) : rule.adjustmentType === 'percent' ? (
-                                                                            <Percent className="w-4 h-4 text-blue-600" />
-                                                                        ) : (
-                                                                            <DollarSign className="w-4 h-4 text-green-600" />
-                                                                        )}
-                                                                        <div>
-                                                                            <div className="font-medium text-sm">
-                                                                                <span className="capitalize">{rule.level}:</span> {getTargetName(rule.level, rule.targetId)}
+                                                            {tierRules.map(rule => {
+                                                                const isOrphaned = orphanedRules.some(o => o.id === rule.id);
+                                                                return (
+                                                                    <div key={rule.id} className={`flex items-center justify-between p-3 rounded-lg border ${isOrphaned ? 'bg-amber-50 border-amber-200' : 'bg-gray-50'}`}>
+                                                                        <div className="flex items-center gap-3">
+                                                                            {rule.adjustmentType === 'constant' ? (
+                                                                                <Lock className="w-4 h-4 text-purple-600" />
+                                                                            ) : rule.adjustmentType === 'percent' ? (
+                                                                                <Percent className="w-4 h-4 text-blue-600" />
+                                                                            ) : (
+                                                                                <DollarSign className="w-4 h-4 text-green-600" />
+                                                                            )}
+                                                                            <div>
+                                                                                <div className="font-medium text-sm flex items-center gap-2">
+                                                                                    <span className="capitalize">{rule.level}:</span> {getTargetName(rule.level, rule.targetId)}
+                                                                                    {isOrphaned && <span className="text-xs text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded">⚠️ Hidden</span>}
+                                                                                </div>
+                                                                                <div className="text-xs text-gray-500">{formatRule(rule)}</div>
                                                                             </div>
-                                                                            <div className="text-xs text-gray-500">{formatRule(rule)}</div>
+                                                                        </div>
+                                                                        <div className="flex gap-1">
+                                                                            <button
+                                                                                onClick={() => handleEditRule(rule)}
+                                                                                className="p-1 text-blue-600 hover:bg-blue-100 rounded"
+                                                                            >
+                                                                                <Edit2 className="w-3 h-3" />
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => { deletePricingRule(rule.id); toast.success('Rule deleted'); }}
+                                                                                className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                                                            >
+                                                                                <Trash2 className="w-3 h-3" />
+                                                                            </button>
                                                                         </div>
                                                                     </div>
-                                                                    <div className="flex gap-1">
-                                                                        <button
-                                                                            onClick={() => handleEditRule(rule)}
-                                                                            className="p-1 text-blue-600 hover:bg-blue-100 rounded"
-                                                                        >
-                                                                            <Edit2 className="w-3 h-3" />
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => { deletePricingRule(rule.id); toast.success('Rule deleted'); }}
-                                                                            className="p-1 text-red-600 hover:bg-red-100 rounded"
-                                                                        >
-                                                                            <Trash2 className="w-3 h-3" />
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Orphaned Rules Section */}
+                                                    {orphanedRules.length > 0 && (
+                                                        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                                            <div className="flex items-center gap-2 text-amber-700 font-medium text-sm mb-2">
+                                                                <AlertTriangle className="w-4 h-4" />
+                                                                {orphanedRules.length} Orphaned Rule{orphanedRules.length > 1 ? 's' : ''} (target not visible)
+                                                            </div>
+                                                            <p className="text-xs text-amber-600">
+                                                                These rules apply to categories/SKUs that are not included in this tier's visibility.
+                                                                Consider removing them or adding the targets to visibility.
+                                                            </p>
                                                         </div>
                                                     )}
                                                 </div>
