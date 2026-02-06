@@ -67,6 +67,7 @@
     "@prisma/client": "^6.3.1"
   },
   "devDependencies": {
+    "@vercel/node": "^2.10.3",
     "prisma": "^6.3.1",
     "@tailwindcss/vite": "4.1.12",
     "@vitejs/plugin-react": "4.7.0",
