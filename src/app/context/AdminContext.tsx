@@ -1,11 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import {
-  initialUnits, initialCategories, initialSubcategories,
-  initialInventory, initialCustomers, initialOrders,
-  initialPriceTiers, initialRoutes, initialEmployees,
-  initialRoles, initialLeads
-} from '../services/mockDb';
-import { loadData, saveData, KEYS, initializeDb, resetDb } from '../services/db';
+import { loadData, saveData, KEYS } from '../services/db';
 
 // --- Interfaces ---
 
@@ -288,26 +282,27 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize DB on mount
+  // Initialize DB on mount
   useEffect(() => {
-    initializeDb();
     setIsInitialized(true);
   }, []);
 
   // Initialize Data from localStorage (with mockDb fallback)
-  const [leads, setLeads] = useState<Lead[]>(() => loadData(KEYS.leads, initialLeads));
-  const [customers, setCustomers] = useState<Customer[]>(() => loadData(KEYS.customers, initialCustomers));
-  const [orders, setOrders] = useState<Order[]>(() => loadData(KEYS.orders, initialOrders));
-  const [inventory, setInventory] = useState<InventoryItem[]>(() => loadData(KEYS.inventory, initialInventory));
+  // Initialize Data from localStorage (with empty fallback)
+  const [leads, setLeads] = useState<Lead[]>(() => loadData(KEYS.leads, []));
+  const [customers, setCustomers] = useState<Customer[]>(() => loadData(KEYS.customers, []));
+  const [orders, setOrders] = useState<Order[]>(() => loadData(KEYS.orders, []));
+  const [inventory, setInventory] = useState<InventoryItem[]>(() => loadData(KEYS.inventory, []));
 
-  const [units, setUnits] = useState<Unit[]>(() => loadData(KEYS.units, initialUnits));
-  const [categories, setCategories] = useState<Category[]>(() => loadData(KEYS.categories, initialCategories));
-  const [subcategories, setSubcategories] = useState<Subcategory[]>(() => loadData(KEYS.subcategories, initialSubcategories));
+  const [units, setUnits] = useState<Unit[]>(() => loadData(KEYS.units, []));
+  const [categories, setCategories] = useState<Category[]>(() => loadData(KEYS.categories, []));
+  const [subcategories, setSubcategories] = useState<Subcategory[]>(() => loadData(KEYS.subcategories, []));
 
-  const [priceTiers, setPriceTiers] = useState<PriceTier[]>(() => loadData(KEYS.priceTiers, initialPriceTiers));
+  const [priceTiers, setPriceTiers] = useState<PriceTier[]>(() => loadData(KEYS.priceTiers, []));
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
-  const [employeeRoles, setEmployeeRoles] = useState<EmployeeRole[]>(() => loadData(KEYS.roles, initialRoles));
-  const [employees, setEmployees] = useState<Employee[]>(() => loadData(KEYS.employees, initialEmployees));
-  const [routes, setRoutes] = useState<Route[]>(() => loadData(KEYS.routes, initialRoutes));
+  const [employeeRoles, setEmployeeRoles] = useState<EmployeeRole[]>(() => loadData(KEYS.roles, []));
+  const [employees, setEmployees] = useState<Employee[]>(() => loadData(KEYS.employees, []));
+  const [routes, setRoutes] = useState<Route[]>(() => loadData(KEYS.routes, []));
 
   const [websiteLinks, setWebsiteLinks] = useState<WebsiteLinks>(() => loadData(KEYS.websiteLinks, {
     aboutUs: 'https://example.com/about',
@@ -340,7 +335,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const logout = () => setIsAuthenticated(false);
 
   const resetData = () => {
-    resetDb();
+    // resetDb(); // Removed as per cleanup
+    // Optional: Clear localStorage manually if needed
+    // localStorage.clear();
     window.location.reload(); // Force reload to pick up new data from localStorage
   };
 
