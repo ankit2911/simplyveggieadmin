@@ -35,6 +35,7 @@ const tabs = [
   { id: 'roles', label: 'Employee Roles', icon: UserCog },
   { id: 'configuration', label: 'Configuration', icon: Settings },
   { id: 'pricingTiers', label: 'Pricing Tiers', icon: Layers },
+  { id: 'wallets', label: 'Wallets', icon: Wallet },
 ];
 
 export function Layout({ children, activeTab, onTabChange, onLogout }: LayoutProps) {

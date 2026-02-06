@@ -167,6 +167,8 @@ export const initialCustomers: Customer[] = [
         addresses: [createAddress('billing', 'Accounts Dept'), createAddress('shipping', 'Kitchen Gate 2')],
         tierId: 't1',
         routeId: 'r1',
+        salesPersonId: 'e5',
+        keyAccountManagerId: 'e6',
         walletBalance: 5000,
         authorizedUsers: [],
         createdAt: new Date(Date.now() - 10000000).toISOString()
@@ -183,6 +185,8 @@ export const initialCustomers: Customer[] = [
         addresses: [createAddress('shipping', 'Store Manager')],
         tierId: 't2',
         routeId: 'r1',
+        salesPersonId: 'e7',
+        keyAccountManagerId: 'e6', // Managed by Priya, Sourced by Amit
         walletBalance: -1200,
         authorizedUsers: [],
         createdAt: new Date(Date.now() - 8000000).toISOString()
@@ -198,6 +202,8 @@ export const initialCustomers: Customer[] = [
         addresses: [createAddress('shipping', 'Receiving Dock')],
         tierId: 't0',
         routeId: 'r2',
+        salesPersonId: 'e5',
+        keyAccountManagerId: 'e8', // Managed by Suresh
         walletBalance: 12000,
         authorizedUsers: [],
         createdAt: new Date(Date.now() - 5000000).toISOString()
@@ -337,7 +343,9 @@ export const initialRoles: EmployeeRole[] = [
     { id: 'er1', name: 'Super Admin', permissions: { appAccess: true, modules: ['all'] } },
     { id: 'er2', name: 'Manager', permissions: { appAccess: true, modules: ['orders', 'inventory', 'customers'] } },
     { id: 'er3', name: 'Driver', permissions: { appAccess: true, modules: ['delivery'] } },
-    { id: 'er4', name: 'Picker/Packer', permissions: { appAccess: true, modules: ['inventory'] } }
+    { id: 'er4', name: 'Picker/Packer', permissions: { appAccess: true, modules: ['inventory'] } },
+    { id: 'er5', name: 'Sales Executive', permissions: { appAccess: true, modules: ['leads'] } },
+    { id: 'er6', name: 'Key Account Manager', permissions: { appAccess: true, modules: ['customers', 'orders'] } }
 ];
 
 export const initialEmployees: Employee[] = [
@@ -345,11 +353,17 @@ export const initialEmployees: Employee[] = [
     { id: 'e2', name: 'Driver Bob', email: 'bob@driver.com', roleIds: ['er3'], isActive: true, createdAt: new Date().toISOString() },
     { id: 'e3', name: 'Manager Alice', email: 'alice@store.com', roleIds: ['er2'], isActive: true, createdAt: new Date().toISOString() },
     { id: 'e4', name: 'Driver Mike', email: 'mike@driver.com', roleIds: ['er3'], isActive: true, createdAt: new Date().toISOString() },
+    { id: 'e5', name: 'Sales Rahul', email: 'rahul@sales.com', roleIds: ['er5'], isActive: true, createdAt: new Date().toISOString() },
+    { id: 'e6', name: 'KAM Priya', email: 'priya@kam.com', roleIds: ['er6'], isActive: true, createdAt: new Date().toISOString() },
+    { id: 'e7', name: 'Sales Amit', email: 'amit@sales.com', roleIds: ['er5'], isActive: true, createdAt: new Date().toISOString() },
+    { id: 'e8', name: 'KAM Suresh', email: 'suresh@kam.com', roleIds: ['er6'], isActive: true, createdAt: new Date().toISOString() },
 ];
 
 export const initialLeads: Lead[] = [
-    { id: 'l1', businessName: 'New Cafe Town', phone: '9876500001', status: 'New', createdAt: new Date().toISOString() },
-    { id: 'l2', businessName: 'Organic Store', phone: '9876500002', status: 'Contacted', createdAt: new Date(Date.now() - 86400000).toISOString() },
-    { id: 'l3', businessName: 'Juice Bar', phone: '9876500003', status: 'Converted', createdAt: new Date(Date.now() - 86400000 * 5).toISOString() },
+    { id: 'l1', businessName: 'New Cafe Town', phone: '9876500001', status: 'New', salesPersonId: 'e5', comments: 'Interested in daily vegetable supply.', createdAt: new Date().toISOString() },
+    { id: 'l2', businessName: 'Organic Store', phone: '9876500002', status: 'Contacted', salesPersonId: 'e5', comments: 'Met with owner, they want organic certification.', createdAt: new Date(Date.now() - 86400000).toISOString() },
+    { id: 'l3', businessName: 'Juice Bar', phone: '9876500003', status: 'Converted', salesPersonId: 'e5', comments: 'Converted to regular customer.', createdAt: new Date(Date.now() - 86400000 * 5).toISOString() },
+    { id: 'l4', businessName: 'Vegan Bistro', phone: '9876500004', status: 'New', salesPersonId: 'e7', comments: 'Amit: Needs samples regarding exotic mushrooms.', createdAt: new Date().toISOString() },
+    { id: 'l5', businessName: 'City Hospital Canteen', phone: '9876500005', status: 'Contacted', salesPersonId: 'e7', comments: 'Amit: Large volume requirement.', createdAt: new Date(Date.now() - 3600000).toISOString() },
 ];
 

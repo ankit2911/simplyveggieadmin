@@ -6,8 +6,27 @@ import { toast } from 'sonner';
 type Tab = 'customers' | 'leads';
 
 export function CustomersPage() {
-  const { customers, leads, routes, priceTiers, addCustomer, updateCustomer, addLead, updateLead, deleteLead } = useAdmin();
+  const { customers, leads, routes, priceTiers, addCustomer, updateCustomer, addLead, updateLead, deleteLead, employees, employeeRoles, currentUser, setCurrentUser, resetData } = useAdmin();
   const [activeTab, setActiveTab] = useState<Tab>('customers');
+
+  // Derived Lists & Roles
+  const salesRole = employeeRoles.find(r => r.name === 'Sales Executive');
+  const kamRole = employeeRoles.find(r => r.name === 'Key Account Manager');
+  const salesEmployees = employees.filter(e => e.roleIds.includes(salesRole?.id || ''));
+  const kamEmployees = employees.filter(e => e.roleIds.includes(kamRole?.id || ''));
+
+  // Current Permissions
+  const isSales = currentUser?.roleIds.includes(salesRole?.id || '');
+  const isKAM = currentUser?.roleIds.includes(kamRole?.id || '');
+
+  // Filtered Lists
+  const visibleleads = isSales
+    ? leads.filter(l => l.salesPersonId === currentUser?.id)
+    : leads;
+
+  const visibleCustomers = isKAM
+    ? customers.filter(c => c.keyAccountManagerId === currentUser?.id)
+    : customers;
 
   // -- Customer Form State --
   const [showCustomerForm, setShowCustomerForm] = useState(false);
@@ -23,6 +42,9 @@ export function CustomersPage() {
     routeId: '',
     pan: '',
     gstin: '',
+    salesPersonId: '',
+    keyAccountManagerId: '',
+    comments: '',
   });
 
   const [addresses, setAddresses] = useState<Omit<Address, 'id'>[]>([
@@ -37,6 +59,8 @@ export function CustomersPage() {
     businessName: '',
     phone: '',
     status: 'New' as Lead['status'],
+    salesPersonId: '',
+    comments: '',
   });
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
@@ -167,7 +191,7 @@ export function CustomersPage() {
   };
 
   const resetCustomerForm = () => {
-    setCustomerFormData({ businessName: '', type: 'b2b', email: '', phone: '', tierId: '', routeId: '', pan: '', gstin: '' });
+    setCustomerFormData({ businessName: '', type: 'b2b', email: '', phone: '', tierId: '', routeId: '', pan: '', gstin: '', salesPersonId: '', keyAccountManagerId: '', comments: '' });
     setAddresses([{ street: '', city: '', state: '', zipCode: '', type: 'billing', landmark: '', attention: '' }]);
     setAuthorizedUsers([]);
     setFormErrors({});
@@ -189,6 +213,9 @@ export function CustomersPage() {
       routeId: customer.routeId || '',
       pan: customer.pan || '',
       gstin: customer.gstin || '',
+      salesPersonId: customer.salesPersonId || '',
+      keyAccountManagerId: customer.keyAccountManagerId || '',
+      comments: customer.comments || '',
     });
     setAddresses(customer.addresses.map(({ id, ...addr }) => ({
       ...addr,
@@ -218,6 +245,9 @@ export function CustomersPage() {
       routeId: '',
       pan: '',
       gstin: '',
+      salesPersonId: lead.salesPersonId || '', // Carry over Sales Person
+      keyAccountManagerId: '', // To be decided
+      comments: lead.comments || '', // Carry over comments
     });
     // Defaults
     setAddresses([{ street: '', city: '', state: '', zipCode: '', type: 'billing', landmark: '', attention: '' }]);
@@ -278,7 +308,7 @@ export function CustomersPage() {
   };
 
   const resetLeadForm = () => {
-    setLeadFormData({ businessName: '', phone: '', status: 'New' });
+    setLeadFormData({ businessName: '', phone: '', status: 'New', salesPersonId: '', comments: '' });
     setFormErrors({});
     setShowLeadForm(false);
     setEditingLead(null);
@@ -291,6 +321,8 @@ export function CustomersPage() {
       businessName: lead.businessName,
       phone: rawPhone,
       status: lead.status,
+      salesPersonId: lead.salesPersonId || '',
+      comments: lead.comments || '',
     });
     setFormErrors({});
     setShowLeadForm(true);
@@ -311,7 +343,37 @@ export function CustomersPage() {
   return (
     <div>
       {/* ... header ... */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex flex-col gap-4">
+        {/* Role Simulator (Dev Only) */}
+        <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg flex items-center justify-between">
+          <span className="text-sm text-yellow-800 font-medium">🕵️ Role Simulator: Viewing as <span className="font-bold">{currentUser?.name || 'Admin'}</span></span>
+          <select
+            className="text-sm border-gray-300 rounded-md shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+            onChange={(e) => setCurrentUser(employees.find(emp => emp.id === e.target.value) || null)}
+            value={currentUser?.id || ''}
+          >
+            <option value="">Admin (Super User)</option>
+            <optgroup label="Sales Team">
+              {salesEmployees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+            </optgroup>
+            <optgroup label="KAM Team">
+              {kamEmployees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+            </optgroup>
+          </select>
+          <button
+            onClick={() => {
+              if (confirm('This will reset all data to initial state. Continue?')) {
+                resetData();
+              }
+            }}
+            className="ml-4 px-3 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 transition-colors"
+          >
+            Reset Data (Dev)
+          </button>
+        </div>
+      </div>
+
+      <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold text-gray-800">
           {activeTab === 'leads' ? 'Leads Management' : 'Customer Management'}
         </h2>
@@ -353,12 +415,13 @@ export function CustomersPage() {
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Business Name</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sales Rep</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Created</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {leads.map((lead) => (
+              {visibleleads.map((lead) => (
                 <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900">{lead.businessName}</td>
                   <td className="px-6 py-4 text-gray-600">{lead.phone}</td>
@@ -369,6 +432,9 @@ export function CustomersPage() {
                       }`}>
                       {lead.status}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {employees.find(e => e.id === lead.salesPersonId)?.name || '-'}
                   </td>
                   <td className="px-6 py-4 text-gray-500 text-sm">{new Date(lead.createdAt).toLocaleDateString()}</td>
                   <td className="px-6 py-4">
@@ -397,7 +463,7 @@ export function CustomersPage() {
                   </td>
                 </tr>
               ))}
-              {leads.length === 0 && (
+              {visibleleads.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
                     No leads found. Add a new lead to get started.
@@ -419,12 +485,14 @@ export function CustomersPage() {
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tier</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Route</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">KAM</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sales Rep</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Wallet</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {customers.map((customer) => {
+              {visibleCustomers.map((customer) => {
                 const tier = priceTiers.find(t => t.id === customer.tierId);
                 const route = routes.find(r => r.id === customer.routeId);
 
@@ -445,6 +513,12 @@ export function CustomersPage() {
                       ) : (
                         <span className="text-gray-400 text-sm italic">Unassigned</span>
                       )}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {employees.find(e => e.id === customer.keyAccountManagerId)?.name || '-'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {employees.find(e => e.id === customer.salesPersonId)?.name || '-'}
                     </td>
                     <td className="px-6 py-4 font-medium text-gray-900">₹{customer.walletBalance.toFixed(2)}</td>
                     <td className="px-6 py-4 text-right">
@@ -516,6 +590,32 @@ export function CustomersPage() {
                   <option value="Contacted">Contacted</option>
                   <option value="Ready">Ready</option>
                 </select>
+              </div>
+
+              {/* Sales Person & Comments */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sales Person</label>
+                <select
+                  value={leadFormData.salesPersonId}
+                  onChange={(e) => setLeadFormData({ ...leadFormData, salesPersonId: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                >
+                  <option value="">Select Sales Person</option>
+                  {salesEmployees.map(e => (
+                    <option key={e.id} value={e.id}>{e.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+                <textarea
+                  value={leadFormData.comments}
+                  onChange={(e) => setLeadFormData({ ...leadFormData, comments: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  rows={3}
+                  placeholder="Internal notes..."
+                />
               </div>
 
               <div className="flex gap-3 pt-4">
@@ -691,6 +791,42 @@ export function CustomersPage() {
                         <option key={route.id} value={route.id}>{route.name} ({route.code})</option>
                       ))}
                     </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Key Account Manager</label>
+                    <select
+                      value={customerFormData.keyAccountManagerId}
+                      onChange={(e) => setCustomerFormData({ ...customerFormData, keyAccountManagerId: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
+                    >
+                      <option value="">Select KAM</option>
+                      {kamEmployees.map(e => (
+                        <option key={e.id} value={e.id}>{e.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Origin Sales Person (Read Only)</label>
+                    <div className="w-full px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-gray-600">
+                      {customers.find(c => c.id === editingCustomer?.id)?.salesPersonId
+                        ? employees.find(e => e.id === customers.find(c => c.id === editingCustomer?.id)?.salesPersonId)?.name
+                        : customerFormData.salesPersonId
+                          ? employees.find(e => e.id === customerFormData.salesPersonId)?.name
+                          : 'None'}
+                    </div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Comments / History</label>
+                    <textarea
+                      value={customerFormData.comments}
+                      onChange={(e) => setCustomerFormData({ ...customerFormData, comments: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
+                      rows={3}
+                      placeholder="Customer history..."
+                    />
                   </div>
                 </div>
               </section>
