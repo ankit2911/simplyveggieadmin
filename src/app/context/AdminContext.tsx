@@ -5,7 +5,7 @@ import {
   initialPriceTiers, initialRoutes, initialEmployees,
   initialRoles, initialLeads
 } from '../services/mockDb';
-import { loadData, saveData, KEYS, initializeDb } from '../services/db';
+import { loadData, saveData, KEYS, initializeDb, resetDb } from '../services/db';
 
 // --- Interfaces ---
 
@@ -14,6 +14,8 @@ export interface Lead {
   businessName: string;
   phone: string;
   status: 'New' | 'Contacted' | 'Ready' | 'Converted';
+  salesPersonId?: string; // Employee ID (Origin)
+  comments?: string;
   createdAt: string;
 }
 
@@ -50,6 +52,10 @@ export interface Customer {
   addresses: Address[];
   tierId?: string;
   routeId?: string;
+  // Account Management
+  salesPersonId?: string;        // Origin: Who brought them in
+  keyAccountManagerId?: string;  // Owner: Who manages them now
+  comments?: string;             // Notes/History
   walletBalance: number;
   createdAt: string;
 }
@@ -223,6 +229,9 @@ interface AdminContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => boolean;
   logout: () => void;
+  currentUser: Employee | null;
+  setCurrentUser: (user: Employee | null) => void;
+  resetData: () => void;
   // Methods
   addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void;
   updateCustomer: (id: string, customer: Partial<Customer>) => void;
@@ -330,6 +339,11 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const login = (email: string, pass: string) => { setIsAuthenticated(true); return true; };
   const logout = () => setIsAuthenticated(false);
 
+  const resetData = () => {
+    resetDb();
+    window.location.reload(); // Force reload to pick up new data from localStorage
+  };
+
   // --- CRUD Implementations ---
 
   const addCustomer = (customer: Omit<Customer, 'id' | 'createdAt'>) => {
@@ -435,11 +449,15 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const updateBanner = (id: string, upd: Partial<Banner>) => setBanners(banners.map(b => b.id === id ? { ...b, ...upd } : b));
   const deleteBanner = (id: string) => setBanners(banners.filter(b => b.id !== id));
 
+  const [currentUser, setCurrentUser] = useState<Employee | null>(null);
+
   return (
     <AdminContext.Provider value={{
       leads, customers, orders, inventory, categories, subcategories, units, priceTiers, walletTransactions,
       employees, employeeRoles, routes, isAuthenticated,
       websiteLinks, partners, banners,
+      currentUser, setCurrentUser,
+      resetData,
       login, logout,
       addCustomer, updateCustomer,
       addLead, updateLead, deleteLead,
