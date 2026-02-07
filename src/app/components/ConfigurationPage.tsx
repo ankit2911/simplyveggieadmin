@@ -21,26 +21,24 @@ export function ConfigurationPage() {
     const [newUnitSymbol, setNewUnitSymbol] = useState('');
 
     // --- Handlers ---
-    const handleAddCategory = () => {
+    const handleAddCategory = async () => {
         if (!newCatName.trim()) return;
-        addCategory({ name: newCatName, description: '' });
+        await addCategory({ name: newCatName, description: '' });
         setNewCatName('');
-        toast.success('Category added');
+        // toast.success('Category added'); // Handled by context or duplicate
     };
 
-    const handleAddSubcategory = () => {
+    const handleAddSubcategory = async () => {
         if (!selectedCatId || !newSubName.trim()) return;
-        addSubcategory({ name: newSubName, categoryId: selectedCatId, description: '' });
+        await addSubcategory({ name: newSubName, categoryId: selectedCatId, description: '' });
         setNewSubName('');
-        toast.success('Subcategory added');
     };
 
-    const handleAddUnit = () => {
+    const handleAddUnit = async () => {
         if (!newUnitName.trim() || !newUnitSymbol.trim()) return;
-        addUnit({ name: newUnitName, symbol: newUnitSymbol });
+        await addUnit({ name: newUnitName, symbol: newUnitSymbol });
         setNewUnitName('');
         setNewUnitSymbol('');
-        toast.success('Unit added');
     };
 
     return (

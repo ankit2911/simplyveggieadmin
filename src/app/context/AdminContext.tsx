@@ -254,19 +254,19 @@ interface AdminContextType {
   addOrder: (order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateOrder: (id: string, updates: Partial<Order>) => void;
   bulkUpdateOrderStatus: (orderIds: string[], status: OrderStatus) => void;
-  addInventoryItem: (item: Omit<InventoryItem, 'id'>) => void;
+  addInventoryItem: (item: Omit<InventoryItem, 'id'>) => Promise<void>;
   updateInventoryItem: (id: string, item: Partial<InventoryItem>) => void;
   adjustInventory: (productId: string, delta: number, type: string, reason?: string) => Promise<void>;
   // Master Data Methods
-  addCategory: (category: Omit<Category, 'id'>) => void;
+  addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
   updateCategory: (id: string, category: Partial<Category>) => void;
-  deleteCategory: (id: string) => void;
-  addSubcategory: (subcategory: Omit<Subcategory, 'id'>) => void;
+  deleteCategory: (id: string) => Promise<void>;
+  addSubcategory: (subcategory: Omit<Subcategory, 'id'>) => Promise<void>;
   updateSubcategory: (id: string, subcategory: Partial<Subcategory>) => void;
-  deleteSubcategory: (id: string) => void;
-  addUnit: (unit: Omit<Unit, 'id'>) => void;
+  deleteSubcategory: (id: string) => Promise<void>;
+  addUnit: (unit: Omit<Unit, 'id'>) => Promise<void>;
   updateUnit: (id: string, unit: Partial<Unit>) => void;
-  deleteUnit: (id: string) => void;
+  deleteUnit: (id: string) => Promise<void>;
 
   addPriceTier: (tier: Omit<PriceTier, 'id'>) => void;
   updatePriceTier: (id: string, tier: Partial<PriceTier>) => void;
@@ -334,13 +334,15 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [pricingRules, setPricingRules] = useState<PricingRule[]>(() => loadData(KEYS.pricingRules, []));
 
   // Auto-save to localStorage on state changes
+  // Auto-save to localStorage on state changes (only for legacy sections)
+  // Inventory, Units, Categories, Subcategories are now DB-backed and do not use localStorage
   useEffect(() => { if (isInitialized) saveData(KEYS.leads, leads); }, [leads, isInitialized]);
   useEffect(() => { if (isInitialized) saveData(KEYS.customers, customers); }, [customers, isInitialized]);
   useEffect(() => { if (isInitialized) saveData(KEYS.orders, orders); }, [orders, isInitialized]);
-  useEffect(() => { if (isInitialized) saveData(KEYS.inventory, inventory); }, [inventory, isInitialized]);
-  useEffect(() => { if (isInitialized) saveData(KEYS.units, units); }, [units, isInitialized]);
-  useEffect(() => { if (isInitialized) saveData(KEYS.categories, categories); }, [categories, isInitialized]);
-  useEffect(() => { if (isInitialized) saveData(KEYS.subcategories, subcategories); }, [subcategories, isInitialized]);
+  // useEffect(() => { if (isInitialized) saveData(KEYS.inventory, inventory); }, [inventory, isInitialized]);
+  // useEffect(() => { if (isInitialized) saveData(KEYS.units, units); }, [units, isInitialized]);
+  // useEffect(() => { if (isInitialized) saveData(KEYS.categories, categories); }, [categories, isInitialized]);
+  // useEffect(() => { if (isInitialized) saveData(KEYS.subcategories, subcategories); }, [subcategories, isInitialized]);
   useEffect(() => { if (isInitialized) saveData(KEYS.priceTiers, priceTiers); }, [priceTiers, isInitialized]);
   useEffect(() => { if (isInitialized) saveData(KEYS.roles, employeeRoles); }, [employeeRoles, isInitialized]);
   useEffect(() => { if (isInitialized) saveData(KEYS.employees, employees); }, [employees, isInitialized]);
@@ -352,14 +354,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   // --- Actions ---
 
+  // --- Actions ---
+
   const fetchInventory = async () => {
     try {
       const res = await fetch('/api/inventory');
       if (!res.ok) throw new Error('Failed to fetch inventory');
       const data = await res.json();
 
-      // Map API response to InventoryItem interface
-      // The API returns Product[] with relations. We map it to InventoryItem shape.
       const mappeditems: InventoryItem[] = data.map((p: any) => ({
         id: p.id,
         name: p.name,
@@ -369,30 +371,43 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         description: p.description,
         category: p.category,
         subcategory: p.subcategory,
-        unit: p.unit, // unit relation
+        unit: p.unit,
         actualStock: p.inventory?.actualStock ?? 0,
         upcomingStock: p.inventory?.upcomingStock ?? 0,
         adjustments: p.InventoryAdjustment,
       }));
-
       setInventory(mappeditems);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to load inventory data');
+      toast.error('Failed to load inventory');
+    }
+  };
+
+  const fetchMasters = async () => {
+    try {
+      const [uRes, cRes, sRes] = await Promise.all([
+        fetch('/api/units'),
+        fetch('/api/categories'),
+        fetch('/api/subcategories')
+      ]);
+
+      if (uRes.ok) setUnits(await uRes.json());
+      if (cRes.ok) setCategories(await cRes.json());
+      if (sRes.ok) setSubcategories(await sRes.json());
+
+    } catch (e) {
+      console.error("Failed to load masters", e);
+      toast.error("Failed to load configuration data");
     }
   };
 
   const initializeDb = async () => {
-    await fetchInventory();
+    await Promise.all([fetchInventory(), fetchMasters()]);
 
     // Load other mock data for now
-    // setUnits(loadData(KEYS.units, []));
-    setCategories(loadData(KEYS.categories, []));
-    setSubcategories(loadData(KEYS.subcategories, []));
     setCustomers(loadData(KEYS.customers, []));
     setOrders(loadData(KEYS.orders, []));
     setPriceTiers(loadData(KEYS.priceTiers, []));
-    // setAuthorizedUsers(loadData(KEYS.authorizedUsers, [])); // Removed
     setRoutes(loadData(KEYS.routes, []));
     setEmployees(loadData(KEYS.employees, []));
 
@@ -407,10 +422,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const logout = () => setIsAuthenticated(false);
 
   const resetData = () => {
-    // resetDb(); // Removed as per cleanup
-    // Optional: Clear localStorage manually if needed
-    // localStorage.clear();
-    window.location.reload(); // Force reload to pick up new data from localStorage
+    window.location.reload();
   };
 
   // --- CRUD Implementations ---
@@ -451,35 +463,79 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!res.ok) throw new Error('Failed to adjust inventory');
-
       toast.success('Inventory updated');
-      await fetchInventory(); // Refresh data
+      await fetchInventory();
     } catch (err) {
       console.error(err);
       toast.error('Failed to update inventory');
     }
   };
 
-  // Deprecated / Disabled
-  const addInventoryItem = (item: any) => {
-    toast.error("Inventory creation disabled in read-only mode");
+  const addInventoryItem = async (item: any) => {
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item)
+      });
+      if (!res.ok) throw new Error("Failed to create product");
+      await fetchInventory(); // Reload to get the new product + empty inventory
+      toast.success("Product created successfully");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to create product");
+    }
   };
+
   const updateInventoryItem = (id: string, updates: any) => {
-    toast.error("Inventory updates disabled in read-only mode");
+    toast.error("Product updates disabled for now");
   };
 
   // Master Data Actions
-  const addCategory = (cat: Omit<Category, 'id'>) => setCategories([...categories, { ...cat, id: `c${Date.now()}` }]);
-  const updateCategory = (id: string, updates: Partial<Category>) => setCategories(categories.map(c => c.id === id ? { ...c, ...updates } : c));
-  const deleteCategory = (id: string) => setCategories(categories.filter(c => c.id !== id));
+  const addCategory = async (cat: Omit<Category, 'id'>) => {
+    try {
+      await fetch('/api/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cat) });
+      fetchMasters(); // Refresh
+    } catch (e) { console.error(e); toast.error("Failed to add category"); }
+  };
+  const updateCategory = (id: string, updates: Partial<Category>) => { toast.info("Update not implemented yet"); };
+  const deleteCategory = async (id: string) => {
+    try {
+      await fetch(`/api/categories?id=${id}`, { method: 'DELETE' });
+      fetchMasters();
+      toast.success("Category deleted");
+    } catch (e) { toast.error("Failed to delete category"); }
+  };
 
-  const addSubcategory = (sub: Omit<Subcategory, 'id'>) => setSubcategories([...subcategories, { ...sub, id: `sc${Date.now()}` }]);
-  const updateSubcategory = (id: string, updates: Partial<Subcategory>) => setSubcategories(subcategories.map(s => s.id === id ? { ...s, ...updates } : s));
-  const deleteSubcategory = (id: string) => setSubcategories(subcategories.filter(s => s.id !== id));
+  const addSubcategory = async (sub: Omit<Subcategory, 'id'>) => {
+    try {
+      await fetch('/api/subcategories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
+      fetchMasters();
+    } catch (e) { console.error(e); toast.error("Failed to add subcategory"); }
+  };
+  const updateSubcategory = (id: string, updates: Partial<Subcategory>) => { toast.info("Update not implemented yet"); };
+  const deleteSubcategory = async (id: string) => {
+    try {
+      await fetch(`/api/subcategories?id=${id}`, { method: 'DELETE' });
+      fetchMasters();
+      toast.success("Subcategory deleted");
+    } catch (e) { toast.error("Failed to delete subcategory"); }
+  };
 
-  const addUnit = (unit: Omit<Unit, 'id'>) => setUnits([...units, { ...unit, id: `u${Date.now()}` }]);
-  const updateUnit = (id: string, updates: Partial<Unit>) => setUnits(units.map(u => u.id === id ? { ...u, ...updates } : u));
-  const deleteUnit = (id: string) => setUnits(units.filter(u => u.id !== id));
+  const addUnit = async (unit: Omit<Unit, 'id'>) => {
+    try {
+      await fetch('/api/units', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(unit) });
+      fetchMasters();
+    } catch (e) { console.error(e); toast.error("Failed to add unit"); }
+  };
+  const updateUnit = (id: string, updates: Partial<Unit>) => { toast.info("Update not implemented yet"); };
+  const deleteUnit = async (id: string) => {
+    try {
+      await fetch(`/api/units?id=${id}`, { method: 'DELETE' });
+      fetchMasters();
+      toast.success("Unit deleted");
+    } catch (e) { toast.error("Failed to delete unit"); }
+  };
 
   const addPriceTier = (tier: Omit<PriceTier, 'id'>) => setPriceTiers([...priceTiers, { ...tier, id: `t${Date.now()}` }]);
   const updatePriceTier = (id: string, updates: Partial<PriceTier>) => setPriceTiers(priceTiers.map(t => t.id === id ? { ...t, ...updates } : t));

@@ -21,25 +21,15 @@ export function ItemsPage() {
     name: '',
     categoryId: '',
     subcategoryId: '',
+    unitId: '',
   });
-
-  // Pack Size State
-  const [packSizes, setPackSizes] = useState<{ size: string; price: number }[]>([]);
-  // Builder State
-  const [builderValue, setBuilderValue] = useState('');
-  const [builderUnit, setBuilderUnit] = useState('');
-  const [builderPrice, setBuilderPrice] = useState('');
 
   // Helpers
   const getCatName = (id: string) => categories.find(c => c.id === id)?.name || 'Unknown';
   const getSubName = (id: string) => subcategories.find(s => s.id === id)?.name || '-';
 
   const resetForm = () => {
-    setFormData({ name: '', categoryId: '', subcategoryId: '' });
-    setPackSizes([]);
-    setBuilderValue('');
-    setBuilderUnit('');
-    setBuilderPrice('');
+    setFormData({ name: '', categoryId: '', subcategoryId: '', unitId: '' });
     setShowForm(false);
     setEditingItem(null);
   };
@@ -49,71 +39,32 @@ export function ItemsPage() {
     setFormData({
       name: item.name,
       categoryId: item.categoryId,
-      subcategoryId: item.subcategoryId
+      subcategoryId: item.subcategoryId || '',
+      unitId: item.unit?.id || ''
     });
-    setPackSizes(item.packSizes.map(size => ({
-      size,
-      price: item.basePrice[size],
-    })));
     setShowForm(true);
   };
 
-  const handleAddBuilderSize = () => {
-    if (!builderValue || !builderUnit) {
-      toast.error("Enter value and select unit");
-      return;
-    }
-    const unit = units.find(u => u.id === builderUnit);
-    if (!unit) return;
-
-    const sizeStr = `${builderValue}${unit.symbol}`;
-    if (packSizes.find(p => p.size === sizeStr)) {
-      toast.error("Size already exists");
-      return;
-    }
-
-    setPackSizes([...packSizes, { size: sizeStr, price: parseFloat(builderPrice) || 0 }]);
-    setBuilderValue('');
-    setBuilderPrice('');
-    // Keep unit
-  };
-
-  const removePackSize = (index: number) => {
-    setPackSizes(packSizes.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (packSizes.length === 0) {
-      toast.error("Add at least one pack size");
-      return;
-    }
 
-    const sizesList = packSizes.map(p => p.size);
-    const basePriceObj: Record<string, number> = {};
-    const quantityObj: Record<string, number> = {}; // Preserve existing qty if editing?
-
-    packSizes.forEach(ps => {
-      basePriceObj[ps.size] = ps.price;
-      // Preserve existing stock if editing, else 0
-      quantityObj[ps.size] = editingItem?.quantityInStock[ps.size] || 0;
-    });
+    // Note: Legacy packSizes and basePrice logic removed.
+    // In future, ProductVariants should be managed here.
 
     const itemData = {
       name: formData.name,
       categoryId: formData.categoryId,
       subcategoryId: formData.subcategoryId,
-      packSizes: sizesList,
-      basePrice: basePriceObj,
-      quantityInStock: quantityObj,
+      unitId: formData.unitId || '', // Need to add unit selection to form!
+      // Default/Placeholder for now as we don't have variant UI yet
     };
 
     if (editingItem) {
       updateInventoryItem(editingItem.id, itemData);
       toast.success('Item updated');
     } else {
-      addInventoryItem(itemData);
-      toast.success('Item added');
+      await addInventoryItem(itemData as any);
+      // Toast handled by context
     }
     resetForm();
   };
@@ -159,8 +110,8 @@ export function ItemsPage() {
             <button
               onClick={() => { setFilterCategory(''); setFilterSubcategory(''); }}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${!filterCategory
-                  ? 'bg-gray-900 text-white shadow-md transform scale-105'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                ? 'bg-gray-900 text-white shadow-md transform scale-105'
+                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                 }`}
             >
               All
@@ -170,8 +121,8 @@ export function ItemsPage() {
                 key={c.id}
                 onClick={() => { setFilterCategory(c.id); setFilterSubcategory(''); }}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filterCategory === c.id
-                    ? 'bg-green-700 text-white shadow-md transform scale-105'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                  ? 'bg-green-700 text-white shadow-md transform scale-105'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                   }`}
               >
                 {c.name}
@@ -196,8 +147,8 @@ export function ItemsPage() {
                 <button
                   onClick={() => setFilterSubcategory('')}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${!filterSubcategory
-                      ? 'bg-gray-800 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-gray-800 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                 >
                   All {categories.find(c => c.id === filterCategory)?.name}
@@ -214,8 +165,8 @@ export function ItemsPage() {
                       setFilterSubcategory(s.id);
                     }}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${filterSubcategory === s.id
-                        ? 'bg-green-100 text-green-800 border border-green-200'
-                        : 'bg-gray-50 text-gray-600 border border-gray-100 hover:bg-gray-100'
+                      ? 'bg-green-100 text-green-800 border border-green-200'
+                      : 'bg-gray-50 text-gray-600 border border-gray-100 hover:bg-gray-100'
                       }`}
                   >
                     {s.name}
@@ -234,7 +185,7 @@ export function ItemsPage() {
               <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Item Name</th>
               <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Category</th>
               <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Subcategory</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Configured Packs</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Variant Config</th>
               <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
@@ -244,16 +195,9 @@ export function ItemsPage() {
                 <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
                 <td className="px-6 py-4 text-gray-600 text-sm">{getCatName(item.categoryId)}</td>
                 <td className="px-6 py-4 text-gray-600 text-sm">{getSubName(item.subcategoryId)}</td>
-                <td className="px-6 py-4">
-                  <div className="flex flex-wrap gap-2">
-                    {item.packSizes.map(size => (
-                      <div key={size} className="px-2 py-1 bg-gray-100 border border-gray-200 rounded text-xs">
-                        <span className="font-semibold text-gray-700">{size}</span>
-                        <span className="text-gray-400 mx-1">|</span>
-                        <span className="text-green-600 font-medium">₹{item.basePrice[size]}</span>
-                      </div>
-                    ))}
-                  </div>
+                <td className="px-6 py-4 text-gray-500 text-sm">
+                  {/* Pack variants removed from display */}
+                  <span className="italic">Standard</span>
                 </td>
                 <td className="px-6 py-4 text-right">
                   <button
@@ -317,7 +261,6 @@ export function ItemsPage() {
                     onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white"
                     disabled={!formData.categoryId}
-                    required
                   >
                     <option value="">Select...</option>
                     {subcategories.filter(s => s.categoryId === formData.categoryId).map(s => (
@@ -325,74 +268,27 @@ export function ItemsPage() {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                  <select
+                    value={formData.unitId}
+                    onChange={(e) => setFormData({ ...formData, unitId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white"
+                    required
+                  >
+                    <option value="">Select Unit...</option>
+                    {units.map(u => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Pack Size Builder Area */}
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-3">Add Pack Configurations</label>
-
-                <div className="flex gap-2 items-end mb-4">
-                  <div className="w-24">
-                    <label className="block text-xs text-gray-400 mb-1">Value (Qty)</label>
-                    <input
-                      type="number"
-                      value={builderValue}
-                      onChange={(e) => setBuilderValue(e.target.value)}
-                      placeholder="1"
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-xs text-gray-400 mb-1">Unit</label>
-                    <select
-                      value={builderUnit}
-                      onChange={(e) => setBuilderUnit(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
-                    >
-                      <option value="">Unit...</option>
-                      {units.map(u => <option key={u.id} value={u.id}>{u.name} ({u.symbol})</option>)}
-                    </select>
-                  </div>
-                  <div className="w-32">
-                    <label className="block text-xs text-gray-400 mb-1">Base Price (₹)</label>
-                    <input
-                      type="number"
-                      value={builderPrice}
-                      onChange={(e) => setBuilderPrice(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAddBuilderSize}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-                  >
-                    Add
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  {packSizes.map((ps, idx) => (
-                    <div key={idx} className="flex justify-between items-center bg-white p-2 rounded-lg border border-gray-200 shadow-sm">
-                      <div className="flex items-center gap-3">
-                        <span className="font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded text-sm">{ps.size}</span>
-                        <span className="text-gray-400">→</span>
-                        <span className="font-medium text-green-700">₹{ps.price.toFixed(2)}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removePackSize(idx)}
-                        className="text-gray-400 hover:text-red-500 p-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                  {packSizes.length === 0 && (
-                    <p className="text-center text-sm text-gray-400 py-2">No packs configured.</p>
-                  )}
-                </div>
+              {/* Pack Size Builder Removed - Inventory is now Base Unit only */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-center text-gray-500 text-sm">
+                <p>Inventory is managed in base units.</p>
+                <p className="text-xs mt-1 text-gray-400">Pack configurations are no longer needed.</p>
               </div>
 
               <div className="pt-4 border-t border-gray-100 flex justify-end gap-3 sticky bottom-0 bg-white pb-2">
