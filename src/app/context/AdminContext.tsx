@@ -103,15 +103,33 @@ export interface InventoryItem {
   id: string;
   name: string;
   categoryId: string;
-  subcategoryId: string;
-  category?: string; // Legacy
-  tags: string[];
-  packSizes: string[];
-  quantityInStock: Record<string, number>;
-  minStockLevel: number;
-  unit: string; // Legacy default unit
-  basePrice: Record<string, number>;
-  sku?: string;
+  subcategoryId: string | null;
+  sku?: string | null;
+  description?: string | null;
+
+  // Relations
+  category?: Category;
+  subcategory?: Subcategory;
+
+  // Inventory Data (from relation)
+  unit: {
+    id: string;
+    name: string;
+    symbol: string;
+  };
+
+  actualStock: number;
+  upcomingStock: number;
+
+  // Recent History
+  adjustments?: {
+    id: string;
+    delta: number;
+    type: string;
+    reason?: string | null;
+    createdAt: string;
+    referenceId?: string | null;
+  }[];
 }
 
 export interface PriceTierItem {
@@ -289,20 +307,20 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   // Initialize Data from localStorage (with mockDb fallback)
   // Initialize Data from localStorage (with empty fallback)
-  const [leads, setLeads] = useState<Lead[]>(() => loadData(KEYS.leads, []));
-  const [customers, setCustomers] = useState<Customer[]>(() => loadData(KEYS.customers, []));
-  const [orders, setOrders] = useState<Order[]>(() => loadData(KEYS.orders, []));
-  const [inventory, setInventory] = useState<InventoryItem[]>(() => loadData(KEYS.inventory, []));
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
 
-  const [units, setUnits] = useState<Unit[]>(() => loadData(KEYS.units, []));
-  const [categories, setCategories] = useState<Category[]>(() => loadData(KEYS.categories, []));
-  const [subcategories, setSubcategories] = useState<Subcategory[]>(() => loadData(KEYS.subcategories, []));
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
 
-  const [priceTiers, setPriceTiers] = useState<PriceTier[]>(() => loadData(KEYS.priceTiers, []));
+  const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
-  const [employeeRoles, setEmployeeRoles] = useState<EmployeeRole[]>(() => loadData(KEYS.roles, []));
-  const [employees, setEmployees] = useState<Employee[]>(() => loadData(KEYS.employees, []));
-  const [routes, setRoutes] = useState<Route[]>(() => loadData(KEYS.routes, []));
+  const [employeeRoles, setEmployeeRoles] = useState<EmployeeRole[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [routes, setRoutes] = useState<Route[]>([]);
 
   const [websiteLinks, setWebsiteLinks] = useState<WebsiteLinks>(() => loadData(KEYS.websiteLinks, {
     aboutUs: 'https://example.com/about',
@@ -330,6 +348,58 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { if (isInitialized) saveData(KEYS.banners, banners); }, [banners, isInitialized]);
   useEffect(() => { if (isInitialized) saveData(KEYS.pricingRules, pricingRules); }, [pricingRules, isInitialized]);
 
+  // --- Actions ---
+
+  const fetchInventory = async () => {
+    try {
+      const res = await fetch('/api/inventory');
+      if (!res.ok) throw new Error('Failed to fetch inventory');
+      const data = await res.json();
+
+      // Map API response to InventoryItem interface
+      // The API returns Product[] with relations. We map it to InventoryItem shape.
+      const mappeditems: InventoryItem[] = data.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        categoryId: p.categoryId,
+        subcategoryId: p.subcategoryId,
+        sku: p.sku,
+        description: p.description,
+        category: p.category,
+        subcategory: p.subcategory,
+        unit: p.unit, // unit relation
+        actualStock: p.inventory?.actualStock ?? 0,
+        upcomingStock: p.inventory?.upcomingStock ?? 0,
+        adjustments: p.InventoryAdjustment,
+      }));
+
+      setInventory(mappeditems);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load inventory data');
+    }
+  };
+
+  const initializeDb = async () => {
+    await fetchInventory();
+
+    // Load other mock data for now
+    // setUnits(loadData(KEYS.units, []));
+    setCategories(loadData(KEYS.categories, []));
+    setSubcategories(loadData(KEYS.subcategories, []));
+    setCustomers(loadData(KEYS.customers, []));
+    setOrders(loadData(KEYS.orders, []));
+    setPriceTiers(loadData(KEYS.priceTiers, []));
+    setAuthorizedUsers(loadData(KEYS.authorizedUsers, []));
+    setRoutes(loadData(KEYS.routes, []));
+    setEmployees(loadData(KEYS.employees, []));
+
+    setIsInitialized(true);
+  };
+
+  useEffect(() => {
+    initializeDb();
+  }, []);
 
   const login = (email: string, pass: string) => { setIsAuthenticated(true); return true; };
   const logout = () => setIsAuthenticated(false);
@@ -369,11 +439,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     setOrders(orders.map(o => ids.includes(o.id) ? { ...o, status, updatedAt: new Date().toISOString() } : o));
   };
 
-  const addInventoryItem = (item: Omit<InventoryItem, 'id'>) => {
-    setInventory([...inventory, { ...item, id: `i${Date.now()}` }]);
+  // Inventory Mutations - DISABLED for Read-Only Mode
+  const addInventoryItem = (item: any) => {
+    toast.error("Inventory creation disabled in read-only mode");
   };
-  const updateInventoryItem = (id: string, updates: Partial<InventoryItem>) => {
-    setInventory(inventory.map(i => i.id === id ? { ...i, ...updates } : i));
+  const updateInventoryItem = (id: string, updates: any) => {
+    toast.error("Inventory updates disabled in read-only mode");
   };
 
   // Master Data Actions
