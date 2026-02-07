@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { loadData, saveData, KEYS } from '../services/db';
+import { toast } from 'sonner';
 
 // --- Interfaces ---
 
@@ -255,6 +256,7 @@ interface AdminContextType {
   bulkUpdateOrderStatus: (orderIds: string[], status: OrderStatus) => void;
   addInventoryItem: (item: Omit<InventoryItem, 'id'>) => void;
   updateInventoryItem: (id: string, item: Partial<InventoryItem>) => void;
+  adjustInventory: (productId: string, delta: number, type: string, reason?: string) => Promise<void>;
   // Master Data Methods
   addCategory: (category: Omit<Category, 'id'>) => void;
   updateCategory: (id: string, category: Partial<Category>) => void;
@@ -390,7 +392,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     setCustomers(loadData(KEYS.customers, []));
     setOrders(loadData(KEYS.orders, []));
     setPriceTiers(loadData(KEYS.priceTiers, []));
-    setAuthorizedUsers(loadData(KEYS.authorizedUsers, []));
+    // setAuthorizedUsers(loadData(KEYS.authorizedUsers, [])); // Removed
     setRoutes(loadData(KEYS.routes, []));
     setEmployees(loadData(KEYS.employees, []));
 
@@ -439,7 +441,26 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     setOrders(orders.map(o => ids.includes(o.id) ? { ...o, status, updatedAt: new Date().toISOString() } : o));
   };
 
-  // Inventory Mutations - DISABLED for Read-Only Mode
+  // Inventory Mutations
+  const adjustInventory = async (productId: string, delta: number, type: string, reason?: string) => {
+    try {
+      const res = await fetch('/api/inventory/adjust', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId, delta, type, reason }),
+      });
+
+      if (!res.ok) throw new Error('Failed to adjust inventory');
+
+      toast.success('Inventory updated');
+      await fetchInventory(); // Refresh data
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to update inventory');
+    }
+  };
+
+  // Deprecated / Disabled
   const addInventoryItem = (item: any) => {
     toast.error("Inventory creation disabled in read-only mode");
   };
@@ -530,7 +551,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       addCustomer, updateCustomer,
       addLead, updateLead, deleteLead,
       addOrder, updateOrder, bulkUpdateOrderStatus,
-      addInventoryItem, updateInventoryItem,
+      addInventoryItem, updateInventoryItem, adjustInventory,
       addCategory, updateCategory, deleteCategory,
       addSubcategory, updateSubcategory, deleteSubcategory,
       addUnit, updateUnit, deleteUnit,
