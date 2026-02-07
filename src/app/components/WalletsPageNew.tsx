@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { useAdmin } from '../context/AdminContext';
 import { Plus, Minus, Eye, Download } from 'lucide-react';
@@ -157,8 +159,8 @@ export function WalletsPageNew() {
                 <button
                   onClick={handleTransaction}
                   className={`px-4 py-2 text-white rounded-lg ${transactionType === 'credit'
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-red-600 hover:bg-red-700'
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-red-600 hover:bg-red-700'
                     }`}
                 >
                   Confirm {transactionType === 'credit' ? 'Credit' : 'Debit'}
@@ -198,10 +200,10 @@ export function WalletsPageNew() {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-lg ${customer.walletBalance >= 5000
-                        ? 'text-green-600'
-                        : customer.walletBalance >= 1000
-                          ? 'text-yellow-600'
-                          : 'text-red-600'
+                      ? 'text-green-600'
+                      : customer.walletBalance >= 1000
+                        ? 'text-yellow-600'
+                        : 'text-red-600'
                       }`}>
                       ₹{customer.walletBalance.toFixed(2)}
                     </span>
@@ -309,8 +311,8 @@ export function WalletsPageNew() {
                       </td>
                       <td className="px-4 py-2">
                         <span className={`px-2 py-1 rounded-full text-xs ${txn.type === 'credit'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
                           }`}>
                           {txn.type}
                         </span>

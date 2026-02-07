@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useRef } from 'react';
 import { useAdmin, Unit, Category, Subcategory } from '../context/AdminContext';
 import { Plus, Trash2, Edit2, Check, X, Tag, Ruler, ChevronRight, Eye, Upload, Image as ImageIcon, ExternalLink } from 'lucide-react';

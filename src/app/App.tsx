@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { AdminProvider, useAdmin } from './context/AdminContext';
 import { Layout } from './components/Layout';

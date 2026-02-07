@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { useAdmin, type InventoryItem } from '../context/AdminContext';
 import { History, Eye, Download } from 'lucide-react';

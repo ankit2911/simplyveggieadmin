@@ -1,3 +1,5 @@
+'use client';
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { loadData, saveData, KEYS } from '../services/db';
 import { toast } from 'sonner';

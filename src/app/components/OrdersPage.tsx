@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { useAdmin, type Order, type OrderStatus } from '../context/AdminContext';
 import { FileText, Check, Printer, Box, Truck, CheckCircle, Edit3, X, Eye, Info } from 'lucide-react';
@@ -277,8 +279,8 @@ export function OrdersPage() {
                               <button
                                 onClick={() => handleGenerateInvoice(order)}
                                 className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm ${order.invoiceDate
-                                    ? 'border border-orange-200 text-orange-700 hover:bg-orange-50'
-                                    : 'bg-orange-600 text-white hover:bg-orange-700'
+                                  ? 'border border-orange-200 text-orange-700 hover:bg-orange-50'
+                                  : 'bg-orange-600 text-white hover:bg-orange-700'
                                   }`}
                               >
                                 <FileText className="w-3.5 h-3.5" />

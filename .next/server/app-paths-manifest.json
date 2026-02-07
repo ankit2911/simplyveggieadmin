@@ -1,0 +1,8 @@
+{
+  "/not-found": "app/not-found.js",
+  "/api/units/route": "app/api/units/route.js",
+  "/page": "app/page.js",
+  "/api/subcategories/route": "app/api/subcategories/route.js",
+  "/api/inventory/route": "app/api/inventory/route.js",
+  "/api/categories/route": "app/api/categories/route.js"
+}

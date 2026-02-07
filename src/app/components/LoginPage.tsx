@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { Carrot } from 'lucide-react';
 import { toast } from 'sonner';

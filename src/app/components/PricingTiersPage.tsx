@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useMemo } from 'react';
 import { useAdmin, type PriceTier, type PricingRule, type AdjustmentType } from '../context/AdminContext';
 import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, Package, Tag, Layers, DollarSign, Percent, Lock, AlertTriangle, Eye, CheckCircle, XCircle } from 'lucide-react';

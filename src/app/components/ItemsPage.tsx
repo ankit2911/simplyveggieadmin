@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { useAdmin, type InventoryItem } from '../context/AdminContext';
 import { Plus, Edit2, Trash2, Filter } from 'lucide-react';
@@ -194,7 +196,7 @@ export function ItemsPage() {
               <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
                 <td className="px-6 py-4 text-gray-600 text-sm">{getCatName(item.categoryId)}</td>
-                <td className="px-6 py-4 text-gray-600 text-sm">{getSubName(item.subcategoryId)}</td>
+                <td className="px-6 py-4 text-gray-600 text-sm">{getSubName(item.subcategoryId || '')}</td>
                 <td className="px-6 py-4 text-gray-500 text-sm">
                   {/* Pack variants removed from display */}
                   <span className="italic">Standard</span>

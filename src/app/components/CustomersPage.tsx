@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { useAdmin, type Customer, type Address, type Lead } from '../context/AdminContext';
 import { Plus, Edit2, Trash2, MapPin, UserPlus, ArrowRight, Building, Users } from 'lucide-react';

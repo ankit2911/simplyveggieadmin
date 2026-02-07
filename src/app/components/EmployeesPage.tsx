@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { useAdmin, type Employee } from '../context/AdminContext';
 import { Plus, Edit2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -280,8 +282,8 @@ export function EmployeesPage() {
                     <button
                       onClick={() => toggleEmployeeStatus(employee)}
                       className={`px-3 py-1 rounded-full text-xs ${employee.isActive
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                          : 'bg-red-100 text-red-800 hover:bg-red-200'
+                        ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                        : 'bg-red-100 text-red-800 hover:bg-red-200'
                         }`}
                     >
                       {employee.isActive ? 'Active' : 'Inactive'}
