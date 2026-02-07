@@ -9,3 +9,120 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// --- Master Data ---
+
+model Unit {
+  id        String    @id @default(uuid())
+  name      String
+  symbol    String
+  products  Product[]
+}
+
+model Category {
+  id            String        @id @default(uuid())
+  name          String
+  description   String?
+  subcategories Subcategory[]
+  products      Product[]
+}
+
+model Subcategory {
+  id          String    @id @default(uuid())
+  categoryId  String
+  name        String
+  description String?
+  category    Category  @relation(fields: [categoryId], references: [id])
+  products    Product[]
+}
+
+// --- Products & Inventory ---
+
+model Product {
+  id            String    @id @default(uuid())
+  name          String
+  description   String?
+  sku           String?   @unique
+  categoryId    String
+  subcategoryId String?
+  unitId        String
+
+  category    Category     @relation(fields: [categoryId], references: [id])
+  subcategory Subcategory? @relation(fields: [subcategoryId], references: [id])
+  unit        Unit         @relation(fields: [unitId], references: [id])
+
+  inventory Inventory?
+  variants  ProductVariant[]
+  InventoryAdjustment InventoryAdjustment[]
+  OrderItem OrderItem[]
+  
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+model Inventory {
+  id            String   @id @default(uuid())
+  productId     String   @unique
+  actualStock   Float    @default(0)
+  upcomingStock Float    @default(0)
+  product       Product  @relation(fields: [productId], references: [id])
+  updatedAt     DateTime @updatedAt
+}
+
+model InventoryAdjustment {
+  id          String   @id @default(uuid())
+  productId   String
+  delta       Float
+  type        String // 'RECEIPT', 'SALE', 'CORRECTION', 'DAMAGE'
+  reason      String?
+  referenceId String? // Order ID or PO ID
+  createdAt   DateTime @default(now())
+  product     Product  @relation(fields: [productId], references: [id])
+}
+
+model ProductVariant {
+  id               String      @id @default(uuid())
+  productId        String
+  name             String
+  price            Float
+  conversionFactor Float       @default(1.0)
+  product          Product     @relation(fields: [productId], references: [id])
+  OrderItem        OrderItem[]
+}
+
+// --- Orders & Customers ---
+
+model Customer {
+  id           String   @id @default(uuid())
+  businessName String
+  phone        String
+  email        String?
+  orders       Order[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  customerId  String
+  status      String      @default("Created")
+  totalAmount Float       @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  customer    Customer    @relation(fields: [customerId], references: [id])
+  items       OrderItem[]
+}
+
+model OrderItem {
+  id             String          @id @default(uuid())
+  orderId        String
+  productId      String
+  variantId      String?
+  quantity       Float // Count of packs
+  orderedQtyBase Float // quantity * conversionFactor
+  price          Float
+  order          Order           @relation(fields: [orderId], references: [id])
+  product        Product         @relation(fields: [productId], references: [id])
+  variant        ProductVariant? @relation(fields: [variantId], references: [id])
+}
+
