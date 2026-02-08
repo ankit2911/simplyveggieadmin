@@ -6,7 +6,19 @@ export async function POST(request: Request) {
     console.log('[API] POST /api/inventory/adjust');
     try {
         const body = await request.json();
-        const { productId, delta, type, reason, referenceId } = body;
+        const { productId, delta, type, reason, referenceId, variantId } = body;
+
+        let multiplier = 1;
+        if (variantId) {
+            const variant = await prisma.productVariant.findUnique({
+                where: { id: variantId }
+            });
+            if (variant) {
+                multiplier = variant.conversionFactor;
+            }
+        }
+
+        const baseDelta = Number(delta) * multiplier;
 
         if (!productId || delta === undefined || !type) {
             return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
@@ -17,7 +29,7 @@ export async function POST(request: Request) {
             const adjustment = await tx.inventoryAdjustment.create({
                 data: {
                     productId,
-                    delta: Number(delta),
+                    delta: baseDelta,
                     type,
                     reason,
                     referenceId,
@@ -29,12 +41,12 @@ export async function POST(request: Request) {
                 where: { productId },
                 update: {
                     actualStock: {
-                        increment: Number(delta),
+                        increment: baseDelta,
                     },
                 },
                 create: {
                     productId,
-                    actualStock: Number(delta),
+                    actualStock: baseDelta,
                     upcomingStock: 0,
                 },
             });

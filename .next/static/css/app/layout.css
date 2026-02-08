@@ -1232,5 +1232,21 @@
 /*!******************************************************************************************************************************************************************************************************************************************************************!*\
   !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[11].oneOf[12].use[2]!./node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[11].oneOf[12].use[3]!./src/styles/index.css ***!
   \******************************************************************************************************************************************************************************************************************************************************************/
-
+@layer base {
+  h1 {
+    @apply text-2xl font-bold tracking-tight text-gray-900;
+  }
+  h2 {
+    @apply text-xl font-semibold tracking-tight text-gray-900;
+  }
+  h3 {
+    @apply text-lg font-medium text-gray-900;
+  }
+  body {
+    @apply text-sm text-gray-600 antialiased;
+  }
+  p {
+    @apply leading-relaxed;
+  }
+}
 

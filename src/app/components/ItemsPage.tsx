@@ -1,18 +1,26 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useAdmin, type InventoryItem } from '../context/AdminContext';
+import { useAdmin, type Product } from '../context/AdminContext';
 import { Plus, Edit2, Trash2, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function ItemsPage() {
   const {
-    inventory, categories, subcategories, units,
-    addInventoryItem, updateInventoryItem
+    products, categories, subcategories, units,
+    addProduct, updateProduct
   } = useAdmin();
 
   const [showForm, setShowForm] = useState(false);
-  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [editingItem, setEditingItem] = useState<Product | null>(null);
+
+  // Variant helper type
+  interface VariantFormData {
+    id?: string;
+    name: string;
+    price: string;
+    conversionFactor: string;
+  }
 
   // Filters
   const [filterCategory, setFilterCategory] = useState('');
@@ -24,6 +32,8 @@ export function ItemsPage() {
     categoryId: '',
     subcategoryId: '',
     unitId: '',
+    basePrice: '',
+    variants: [] as VariantFormData[]
   });
 
   // Helpers
@@ -31,7 +41,7 @@ export function ItemsPage() {
   const getSubName = (id: string) => subcategories.find(s => s.id === id)?.name || '-';
 
   const resetForm = () => {
-    setFormData({ name: '', categoryId: '', subcategoryId: '', unitId: '' });
+    setFormData({ name: '', categoryId: '', subcategoryId: '', unitId: '', basePrice: '', variants: [] });
     setShowForm(false);
     setEditingItem(null);
   };
@@ -42,7 +52,14 @@ export function ItemsPage() {
       name: item.name,
       categoryId: item.categoryId,
       subcategoryId: item.subcategoryId || '',
-      unitId: item.unit?.id || ''
+      unitId: item.unitId,
+      basePrice: String(item.basePrice),
+      variants: item.variants?.map(v => ({
+        id: v.id,
+        name: v.name,
+        price: v.price !== null ? String(v.price) : '',
+        conversionFactor: String(v.conversionFactor)
+      })) || []
     });
     setShowForm(true);
   };
@@ -53,25 +70,33 @@ export function ItemsPage() {
     // Note: Legacy packSizes and basePrice logic removed.
     // In future, ProductVariants should be managed here.
 
-    const itemData = {
+    const productData = {
       name: formData.name,
       categoryId: formData.categoryId,
-      subcategoryId: formData.subcategoryId,
-      unitId: formData.unitId || '', // Need to add unit selection to form!
-      // Default/Placeholder for now as we don't have variant UI yet
+      subcategoryId: formData.subcategoryId || null,
+      unitId: formData.unitId || '',
+      sku: '', // Optional
+      description: '',
+      basePrice: Number(formData.basePrice),
+      variants: formData.variants.map(v => ({
+        id: v.id,
+        name: v.name,
+        price: v.price === '' ? null : Number(v.price),
+        conversionFactor: Number(v.conversionFactor)
+      }))
     };
 
     if (editingItem) {
-      updateInventoryItem(editingItem.id, itemData);
-      toast.success('Item updated');
+      await updateProduct(editingItem.id, productData);
+      toast.success('Product updated');
     } else {
-      await addInventoryItem(itemData as any);
+      await addProduct(productData as any);
       // Toast handled by context
     }
     resetForm();
   };
 
-  const filteredInventory = inventory.filter(item => {
+  const filteredProducts = products.filter(item => {
     if (filterCategory && item.categoryId !== filterCategory) return false;
     if (filterSubcategory && item.subcategoryId !== filterSubcategory) return false;
     return true;
@@ -187,19 +212,34 @@ export function ItemsPage() {
               <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Item Name</th>
               <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Category</th>
               <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Subcategory</th>
+              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Base Price</th>
               <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Variant Config</th>
               <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {filteredInventory.map((item) => (
+            {filteredProducts.map((item) => (
               <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
                 <td className="px-6 py-4 text-gray-600 text-sm">{getCatName(item.categoryId)}</td>
                 <td className="px-6 py-4 text-gray-600 text-sm">{getSubName(item.subcategoryId || '')}</td>
+                <td className="px-6 py-4 text-right text-gray-900 font-mono text-sm">₹{item.basePrice.toFixed(2)}</td>
                 <td className="px-6 py-4 text-gray-500 text-sm">
-                  {/* Pack variants removed from display */}
-                  <span className="italic">Standard</span>
+                  {item.variants && item.variants.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {item.variants.map(v => {
+                        const isComputed = v.price === null;
+                        const finalPrice = isComputed ? (item.basePrice * v.conversionFactor) : v.price!;
+                        return (
+                          <span key={v.id} title={isComputed ? "Computed from Base Price" : "Manual Override"} className={`px-2 py-0.5 rounded text-xs border ${isComputed ? 'bg-gray-50 text-gray-500 border-gray-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                            {v.name} (₹{finalPrice.toFixed(2)})
+                          </span>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <span className="italic text-gray-400">Standard Only</span>
+                  )}
                 </td>
                 <td className="px-6 py-4 text-right">
                   <button
@@ -211,7 +251,7 @@ export function ItemsPage() {
                 </td>
               </tr>
             ))}
-            {filteredInventory.length === 0 && (
+            {filteredProducts.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
                   No items found. Add one or adjust filters.
@@ -284,13 +324,104 @@ export function ItemsPage() {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Base Price (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.basePrice}
+                    onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    required
+                    placeholder="0.00"
+                  />
+                </div>
               </div>
 
               {/* Pack Size Builder Area */}
-              {/* Pack Size Builder Removed - Inventory is now Base Unit only */}
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-center text-gray-500 text-sm">
-                <p>Inventory is managed in base units.</p>
-                <p className="text-xs mt-1 text-gray-400">Pack configurations are no longer needed.</p>
+              {/* Pack Size Builder Area */}
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-sm font-medium text-gray-700">Pack Configurations (Variants)</h4>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({
+                      ...formData,
+                      variants: [...formData.variants, { name: '', price: '', conversionFactor: '' }]
+                    })}
+                    className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    <Plus className="w-3 h-3" /> Add Pack
+                  </button>
+                </div>
+
+                {formData.variants.length === 0 ? (
+                  <p className="text-xs text-center text-gray-400 py-2">No packs defined. Item sold in base unit only.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {formData.variants.map((variant, idx) => (
+                      <div key={idx} className="flex gap-2 items-start">
+                        <div className="flex-1">
+                          <input
+                            placeholder="Name (e.g. 5kg Pack)"
+                            className="w-full px-2 py-1.5 text-sm border rounded"
+                            value={variant.name}
+                            onChange={(e) => {
+                              const newVariants = [...formData.variants];
+                              newVariants[idx].name = e.target.value;
+                              setFormData({ ...formData, variants: newVariants });
+                            }}
+                            required
+                          />
+                        </div>
+                        <div className="w-24">
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="Multiplier"
+                            title="Converson Factor (e.g. 5 for 5kg)"
+                            className="w-full px-2 py-1.5 text-sm border rounded"
+                            value={variant.conversionFactor}
+                            onChange={(e) => {
+                              const newVariants = [...formData.variants];
+                              newVariants[idx].conversionFactor = e.target.value;
+                              setFormData({ ...formData, variants: newVariants });
+                            }}
+                            required
+                          />
+                        </div>
+                        <div className="w-32">
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder={variant.conversionFactor ? `₹${(Number(formData.basePrice) * Number(variant.conversionFactor)).toFixed(2)}` : "Price (₹)"}
+                            className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                            value={variant.price}
+                            onChange={(e) => {
+                              const newVariants = [...formData.variants];
+                              newVariants[idx].price = e.target.value;
+                              setFormData({ ...formData, variants: newVariants });
+                            }}
+                          />
+                          <p className="text-[10px] text-gray-400 mt-0.5 text-right">
+                            {variant.price === '' ? '(Computed)' : '(Override)'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newVariants = formData.variants.filter((_, i) => i !== idx);
+                            setFormData({ ...formData, variants: newVariants });
+                          }}
+                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="pt-4 border-t border-gray-100 flex justify-end gap-3 sticky bottom-0 bg-white pb-2">

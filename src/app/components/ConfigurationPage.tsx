@@ -173,16 +173,21 @@ export function ConfigurationPage() {
                                         ))
                                     }
                                     {subcategories.filter(sub => sub.categoryId === selectedCatId).length === 0 && (
-                                        <div className="text-center text-gray-400 py-10 italic">
-                                            No subcategories defined
+                                        <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
+                                            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                                <Tag className="w-6 h-6 text-gray-300" />
+                                            </div>
+                                            <p className="text-sm font-medium text-gray-900">No subcategories</p>
+                                            <p className="text-xs text-gray-500">Add a subcategory to get started</p>
                                         </div>
                                     )}
                                 </div>
                             </>
                         ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+                            <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-8">
                                 <Tag size={48} className="mb-4 opacity-20" />
-                                <p>Select a parent category to manage its subcategories</p>
+                                <p className="text-gray-500 font-medium">Select a Category</p>
+                                <p className="text-sm">Click on a parent category to manage its subcategories</p>
                             </div>
                         )}
                     </div>
@@ -219,27 +224,42 @@ export function ConfigurationPage() {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-gray-50 border-b border-gray-100 text-gray-600 text-sm">
+                                <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wider font-semibold">
                                     <th className="p-3">Name</th>
                                     <th className="p-3">Symbol</th>
                                     <th className="p-3 text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-gray-100">
                                 {units.map(unit => (
-                                    <tr key={unit.id} className="border-b border-gray-50 hover:bg-gray-50">
+                                    <tr key={unit.id} className="hover:bg-gray-50 transition-colors">
                                         <td className="p-3 font-medium text-gray-800">{unit.name}</td>
-                                        <td className="p-3 font-mono text-sm text-blue-600 bg-blue-50 w-fit rounded px-2">{unit.symbol}</td>
+                                        <td className="p-3 font-mono text-sm text-blue-600">
+                                            <span className="bg-blue-50 px-2 py-1 rounded border border-blue-100">{unit.symbol}</span>
+                                        </td>
                                         <td className="p-3 text-right">
                                             <button
                                                 onClick={() => deleteUnit(unit.id)}
-                                                className="text-gray-400 hover:text-red-500 bg-transparent p-2 rounded hover:bg-red-50"
+                                                className="text-gray-400 hover:text-red-600 bg-transparent p-2 rounded hover:bg-red-50 transition-colors"
                                             >
                                                 <Trash2 size={16} />
                                             </button>
                                         </td>
                                     </tr>
                                 ))}
+                                {units.length === 0 && (
+                                    <tr>
+                                        <td colSpan={3} className="p-8 text-center">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                                    <Ruler className="w-6 h-6 text-gray-400" />
+                                                </div>
+                                                <p className="text-sm font-medium text-gray-900">No Units Defined</p>
+                                                <p className="text-xs text-gray-500 mt-1">Add measurement units like kg, g, pcs</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -440,33 +460,33 @@ function WebsiteContentSection() {
                     </div>
 
                     {/* Partners List (Compact) */}
-                    <div className="border rounded-lg overflow-hidden">
+                    <div className="border border-gray-100 rounded-lg overflow-hidden">
                         <table className="w-full text-left text-sm">
-                            <thead className="bg-gray-50 border-b">
+                            <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
                                     <th className="p-3 w-12 text-center text-gray-500"><ImageIcon size={16} /></th>
-                                    <th className="p-3 text-gray-600 font-semibold">Partner Details</th>
-                                    <th className="p-3 text-right text-gray-600 font-semibold">Actions</th>
+                                    <th className="p-3 text-gray-500 font-semibold text-xs uppercase tracking-wider">Partner Details</th>
+                                    <th className="p-3 text-right text-gray-500 font-semibold text-xs uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y">
+                            <tbody className="divide-y divide-gray-100">
                                 {partners.map(p => (
-                                    <tr key={p.id} className="hover:bg-gray-50 group">
+                                    <tr key={p.id} className="hover:bg-gray-50 group transition-colors">
                                         <td className="p-2 text-center">
-                                            <div className="w-8 h-8 mx-auto bg-white border rounded flex items-center justify-center overflow-hidden">
+                                            <div className="w-8 h-8 mx-auto bg-white border border-gray-200 rounded flex items-center justify-center overflow-hidden p-0.5">
                                                 <img src={p.imageUrl} alt="" className="w-full h-full object-contain" />
                                             </div>
                                         </td>
                                         <td className="p-2">
                                             <div className="font-medium text-gray-900">{p.name}</div>
                                             {p.websiteUrl && (
-                                                <a href={p.websiteUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline flex items-center gap-1">
+                                                <a href={p.websiteUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline flex items-center gap-1 mt-0.5">
                                                     {p.websiteUrl} <ExternalLink size={10} />
                                                 </a>
                                             )}
                                         </td>
                                         <td className="p-2 text-right">
-                                            <div className="flex justify-end gap-1">
+                                            <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button onClick={() => setViewImage(p.imageUrl)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded">
                                                     <Eye size={16} />
                                                 </button>
@@ -481,7 +501,16 @@ function WebsiteContentSection() {
                                     </tr>
                                 ))}
                                 {partners.length === 0 && (
-                                    <tr><td colSpan={3} className="p-4 text-center text-gray-400 italic">No partners yet.</td></tr>
+                                    <tr>
+                                        <td colSpan={3} className="p-6 text-center text-gray-500">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center mb-2">
+                                                    <ImageIcon className="w-5 h-5 text-gray-300" />
+                                                </div>
+                                                <span className="text-sm">No partners yet</span>
+                                            </div>
+                                        </td>
+                                    </tr>
                                 )}
                             </tbody>
                         </table>
@@ -550,35 +579,35 @@ function WebsiteContentSection() {
                 </div>
 
                 {/* Banners List (Compact) */}
-                <div className="border rounded-lg overflow-hidden flex-1">
+                <div className="border border-gray-100 rounded-lg overflow-hidden flex-1">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-gray-50 border-b">
+                        <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
-                                <th className="p-3 w-12 text-center text-gray-500">Ord</th>
-                                <th className="p-3 w-16 text-center text-gray-500">Img</th>
-                                <th className="p-3 text-gray-600 font-semibold">Banner Details</th>
-                                <th className="p-3 text-right text-gray-600 font-semibold">Actions</th>
+                                <th className="p-3 w-12 text-center text-gray-500 text-xs uppercase font-semibold">Ord</th>
+                                <th className="p-3 w-16 text-center text-gray-500 text-xs uppercase font-semibold">Img</th>
+                                <th className="p-3 text-gray-500 font-semibold text-xs uppercase tracking-wider">Banner Details</th>
+                                <th className="p-3 text-right text-gray-500 font-semibold text-xs uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y">
+                        <tbody className="divide-y divide-gray-100">
                             {banners.sort((a, b) => a.order - b.order).map(b => (
-                                <tr key={b.id} className="hover:bg-gray-50 group">
-                                    <td className="p-2 text-center font-bold text-gray-500">#{b.order}</td>
+                                <tr key={b.id} className="hover:bg-gray-50 group transition-colors">
+                                    <td className="p-2 text-center font-bold text-gray-400 text-xs">#{b.order}</td>
                                     <td className="p-2 text-center">
-                                        <div className="w-12 h-6 mx-auto bg-gray-100 border rounded flex items-center justify-center overflow-hidden">
+                                        <div className="w-12 h-6 mx-auto bg-gray-100 border border-gray-200 rounded flex items-center justify-center overflow-hidden">
                                             <img src={b.imageUrl} alt="" className="w-full h-full object-cover" />
                                         </div>
                                     </td>
                                     <td className="p-2">
                                         <div className="font-medium text-gray-900">{b.name}</div>
                                         {b.linkUrl && (
-                                            <a href={b.linkUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline flex items-center gap-1">
+                                            <a href={b.linkUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline flex items-center gap-1 mt-0.5">
                                                 Link <ExternalLink size={10} />
                                             </a>
                                         )}
                                     </td>
                                     <td className="p-2 text-right">
-                                        <div className="flex justify-end gap-1">
+                                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button onClick={() => setViewImage(b.imageUrl)} className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded">
                                                 <Eye size={16} />
                                             </button>
@@ -593,7 +622,16 @@ function WebsiteContentSection() {
                                 </tr>
                             ))}
                             {banners.length === 0 && (
-                                <tr><td colSpan={4} className="p-4 text-center text-gray-400 italic">No banners configured.</td></tr>
+                                <tr>
+                                    <td colSpan={4} className="p-6 text-center text-gray-500">
+                                        <div className="flex flex-col items-center justify-center">
+                                            <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center mb-2">
+                                                <ImageIcon className="w-5 h-5 text-gray-300" />
+                                            </div>
+                                            <span className="text-sm">No banners configured</span>
+                                        </div>
+                                    </td>
+                                </tr>
                             )}
                         </tbody>
                     </table>

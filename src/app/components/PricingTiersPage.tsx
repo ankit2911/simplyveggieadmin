@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useAdmin, type PriceTier, type PricingRule, type AdjustmentType } from '../context/AdminContext';
+import { useAdmin, type PriceTier, type PricingRule, type AdjustmentType, type Product } from '../context/AdminContext';
 import { Plus, Edit2, Trash2, X, ChevronDown, ChevronRight, Package, Tag, Layers, DollarSign, Percent, Lock, AlertTriangle, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { calculateEffectivePrice, getTierCoverage, formatRuleDescription, isSkuVisible as checkSkuVisible } from '../utils/pricingUtils';
@@ -10,7 +10,7 @@ type TierTab = 'audit' | 'visibility' | 'rules';
 
 export function PricingTiersPage() {
     const {
-        priceTiers, categories, subcategories, inventory,
+        priceTiers, categories, subcategories, products,
         pricingRules, addPricingRule, updatePricingRule, deletePricingRule,
         addPriceTier, updatePriceTier
     } = useAdmin();
@@ -178,7 +178,7 @@ export function PricingTiersPage() {
     const getTargetName = (level: string, targetId: string) => {
         if (level === 'category') return categories.find(c => c.id === targetId)?.name || targetId;
         if (level === 'subcategory') return subcategories.find(s => s.id === targetId)?.name || targetId;
-        return inventory.find(i => i.id === targetId)?.name || targetId;
+        return products.find(i => i.id === targetId)?.name || targetId;
     };
 
     const formatRule = (rule: PricingRule) => {
@@ -195,9 +195,8 @@ export function PricingTiersPage() {
             includedSubcategoryIds: tier.includedSubcategoryIds || [],
             includedSkuIds: tier.includedSkuIds || [],
         };
-        const skuInfos = inventory.map(item => {
-            const bp = item.basePrice;
-            const firstPrice = (bp && typeof bp === 'object') ? (bp[Object.keys(bp)[0]] || 0) : 0;
+        const skuInfos = products.map(item => {
+            const firstPrice = item.basePrice || 0;
             return {
                 id: item.id,
                 categoryId: item.categoryId,
@@ -233,8 +232,8 @@ export function PricingTiersPage() {
     const ruleTargets = useMemo(() => {
         if (ruleFormData.level === 'category') return categories;
         if (ruleFormData.level === 'subcategory') return subcategories;
-        return inventory;
-    }, [ruleFormData.level, categories, subcategories, inventory]);
+        return products;
+    }, [ruleFormData.level, categories, subcategories, products]);
 
     // Compute audit data for a tier - only SKUs that are visible OR have a rule
     const computeAuditData = (tier: PriceTier) => {
@@ -246,9 +245,8 @@ export function PricingTiersPage() {
 
         const tierRulesLocal = pricingRules.filter(r => r.tierId === tier.id);
 
-        return inventory.map(item => {
-            const bp = item.basePrice;
-            const firstPrice = (bp && typeof bp === 'object') ? (bp[Object.keys(bp)[0]] || 0) : 0;
+        return products.map(item => {
+            const firstPrice = item.basePrice || 0;
             const skuInfo = {
                 id: item.id,
                 categoryId: item.categoryId,
@@ -283,8 +281,8 @@ export function PricingTiersPage() {
         const catIds = new Set(tier.includedCategoryIds || []);
         const subIds = new Set(tier.includedSubcategoryIds || []);
         const skuIds = new Set(tier.includedSkuIds || []);
-        return inventory.filter(item =>
-            catIds.has(item.categoryId) || subIds.has(item.subcategoryId) || skuIds.has(item.id)
+        return products.filter(item =>
+            catIds.has(item.categoryId) || (item.subcategoryId && subIds.has(item.subcategoryId)) || skuIds.has(item.id)
         ).length;
     };
 
@@ -531,7 +529,7 @@ export function PricingTiersPage() {
                                                             ) : (
                                                                 (tier.includedSkuIds || []).map(skuId => (
                                                                     <div key={skuId} className="flex items-center justify-between text-sm text-gray-800 bg-white px-2 py-1 rounded border">
-                                                                        <span>{inventory.find(i => i.id === skuId)?.name || skuId}</span>
+                                                                        <span>{products.find(i => i.id === skuId)?.name || skuId}</span>
                                                                         {!hasRuleFor(tier.id, 'sku', skuId) && (
                                                                             <button
                                                                                 onClick={() => quickAddRule(tier.id, 'sku', skuId)}
@@ -702,7 +700,7 @@ export function PricingTiersPage() {
                                                     <div className="text-sm text-gray-500">{cat.description}</div>
                                                 </div>
                                                 <span className="ml-auto text-xs bg-gray-100 px-2 py-1 rounded">
-                                                    {inventory.filter(i => i.categoryId === cat.id).length} items
+                                                    {products.filter(i => i.categoryId === cat.id).length} items
                                                 </span>
                                             </label>
                                         ))}
@@ -728,7 +726,7 @@ export function PricingTiersPage() {
                                 )}
                                 {activeVisibilityTab === 'skus' && (
                                     <div className="divide-y">
-                                        {inventory.map(item => (
+                                        {products.map(item => (
                                             <label key={item.id} className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 ${selectedSkus.has(item.id) ? 'bg-green-50' : ''}`}>
                                                 <input
                                                     type="checkbox"

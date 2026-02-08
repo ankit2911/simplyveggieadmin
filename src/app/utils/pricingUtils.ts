@@ -8,7 +8,7 @@ import { type PricingRule, type AdjustmentType } from '../context/AdminContext';
 interface SkuInfo {
     id: string;
     categoryId: string;
-    subcategoryId: string;
+    subcategoryId: string | null;
     basePrice: number; // Price per default unit
 }
 
@@ -33,7 +33,7 @@ export interface EffectivePriceResult {
 export function isSkuVisible(sku: SkuInfo, visibility: TierVisibility): boolean {
     return (
         visibility.includedCategoryIds.includes(sku.categoryId) ||
-        visibility.includedSubcategoryIds.includes(sku.subcategoryId) ||
+        (sku.subcategoryId ? visibility.includedSubcategoryIds.includes(sku.subcategoryId) : false) ||
         visibility.includedSkuIds.includes(sku.id)
     );
 }

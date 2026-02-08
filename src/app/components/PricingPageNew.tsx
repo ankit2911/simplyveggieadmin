@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAdmin, type PriceTier } from '../context/AdminContext';
-import { Plus, Download, Upload, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Download, Upload, TrendingUp, TrendingDown, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function PricingPageNew() {
@@ -142,20 +142,20 @@ export function PricingPageNew() {
       {/* Pricing Table */}
       <div className="bg-white rounded-lg shadow overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase sticky left-0 bg-gray-50">Item</th>
-              <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase">Unit</th>
-              <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase">Category</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">Item</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Unit</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
               {displayTiers.map(tier => (
-                <th key={tier.id} className="px-4 py-3 text-left text-xs text-gray-500 uppercase">
+                <th key={tier.id} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   {tier.name}
-                  {tier.id !== 't0' && <div className="text-xs text-gray-400 normal-case">vs Base</div>}
+                  {tier.id !== 't0' && <div className="text-[10px] text-gray-400 normal-case font-normal mt-0.5">vs Base</div>}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-gray-100">
             {filteredItems.map(item => {
               const basePrice = getPriceForTier('t0', item.id);
 
@@ -192,6 +192,21 @@ export function PricingPageNew() {
                 </tr>
               );
             })}
+            {filteredItems.length === 0 && (
+              <tr>
+                <td colSpan={3 + displayTiers.length} className="px-6 py-12 text-center text-gray-500 bg-white">
+                  <div className="flex flex-col items-center justify-center py-6">
+                    <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                      <Search className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <h3 className="text-md font-medium text-gray-900 mb-1">No Items Found</h3>
+                    <p className="max-w-xs text-sm text-gray-500">
+                      No items match your selected filters. Try changing the category or adding new items.
+                    </p>
+                  </div>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

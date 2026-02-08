@@ -59,6 +59,8 @@ export interface Customer {
 
 export interface OrderItem {
   id: string;
+  productId: string;
+  variantId?: string | null;
   itemName: string;
   packSize: string;
   orderedQuantity: number;
@@ -121,6 +123,8 @@ export interface InventoryItem {
     symbol: string;
   };
 
+  // basePrice removed - strictly distinct from Product
+
   actualStock: number;
   upcomingStock: number;
 
@@ -133,6 +137,31 @@ export interface InventoryItem {
     createdAt: string;
     referenceId?: string | null;
   }[];
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  categoryId: string;
+  subcategoryId: string | null;
+  unitId: string;
+  sku: string | null;
+  description: string | null;
+  basePrice: number;
+
+  // Relations
+  category?: Category;
+  subcategory?: Subcategory;
+  unit?: Unit;
+  variants?: ProductVariant[];
+}
+
+export interface ProductVariant {
+  id: string;
+  productId: string;
+  name: string;
+  price: number | null;
+  conversionFactor: number;
 }
 
 export interface PriceTierItem {
@@ -230,6 +259,7 @@ interface AdminContextType {
   customers: Customer[];
   orders: Order[];
   inventory: InventoryItem[];
+  products: Product[];
   categories: Category[];
   subcategories: Subcategory[];
   units: Unit[];
@@ -256,9 +286,13 @@ interface AdminContextType {
   addOrder: (order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateOrder: (id: string, updates: Partial<Order>) => void;
   bulkUpdateOrderStatus: (orderIds: string[], status: OrderStatus) => void;
-  addInventoryItem: (item: Omit<InventoryItem, 'id'>) => Promise<void>;
-  updateInventoryItem: (id: string, item: Partial<InventoryItem>) => void;
-  adjustInventory: (productId: string, delta: number, type: string, reason?: string) => Promise<void>;
+  // Inventory Actions
+  adjustInventory: (productId: string, delta: number, type: string, reason?: string, variantId?: string) => Promise<void>;
+
+  // Product Actions
+  fetchProducts: () => Promise<void>;
+  addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
+  updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
   // Master Data Methods
   addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
   updateCategory: (id: string, category: Partial<Category>) => void;
@@ -315,6 +349,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
   const [units, setUnits] = useState<Unit[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -374,6 +409,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         category: p.category,
         subcategory: p.subcategory,
         unit: p.unit,
+        // basePrice removed
         actualStock: p.inventory?.actualStock ?? 0,
         upcomingStock: p.inventory?.upcomingStock ?? 0,
         adjustments: p.InventoryAdjustment,
@@ -382,6 +418,33 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.error(err);
       toast.error('Failed to load inventory');
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch('/api/products');
+      if (!res.ok) throw new Error('Failed to fetch products');
+      const data = await res.json();
+      // Ensure strict typing
+      const mappedProducts: Product[] = data.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        categoryId: p.categoryId,
+        subcategoryId: p.subcategoryId,
+        unitId: p.unitId,
+        sku: p.sku,
+        description: p.description,
+        basePrice: p.basePrice || 0,
+        category: p.category,
+        subcategory: p.subcategory,
+        unit: p.unit,
+        variants: p.variants || []
+      }));
+      setProducts(mappedProducts);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load products');
     }
   };
 
@@ -404,7 +467,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   const initializeDb = async () => {
-    await Promise.all([fetchInventory(), fetchMasters()]);
+    await Promise.all([fetchInventory(), fetchProducts(), fetchMasters()]);
 
     // Load other mock data for now
     setCustomers(loadData(KEYS.customers, []));
@@ -444,9 +507,28 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
   const deleteLead = (id: string) => setLeads(leads.filter(l => l.id !== id));
 
-  const addOrder = (order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const now = new Date().toISOString();
-    setOrders([...orders, { ...order, id: `o${Date.now()}`, createdAt: now, updatedAt: now }]);
+  const addOrder = async (order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(order)
+      });
+      if (!res.ok) throw new Error("Failed to create order");
+
+      // Refresh orders and inventory
+      await Promise.all([
+        // fetchOrders(), // You might need to add fetchOrders if it exists or reload
+        // For now, re-fetch everything or minimal
+        fetchInventory() // Inventory surely changed
+      ]);
+
+      // Manually update local state for immediate feedback (optional, or just reload)
+      window.location.reload();
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to create order");
+    }
   };
   const updateOrder = (id: string, updates: Partial<Order>) => {
     setOrders(orders.map(o => o.id === id ? { ...o, ...updates, updatedAt: new Date().toISOString() } : o));
@@ -456,12 +538,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Inventory Mutations
-  const adjustInventory = async (productId: string, delta: number, type: string, reason?: string) => {
+  const adjustInventory = async (productId: string, delta: number, type: string, reason?: string, variantId?: string) => {
     try {
       const res = await fetch('/api/inventory/adjust', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId, delta, type, reason }),
+        body: JSON.stringify({ productId, delta, type, reason, variantId }),
       });
 
       if (!res.ok) throw new Error('Failed to adjust inventory');
@@ -473,15 +555,16 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const addInventoryItem = async (item: any) => {
+  // Product CRUD
+  const addProduct = async (product: any) => {
     try {
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(item)
+        body: JSON.stringify(product)
       });
       if (!res.ok) throw new Error("Failed to create product");
-      await fetchInventory(); // Reload to get the new product + empty inventory
+      await Promise.all([fetchProducts(), fetchInventory()]);
       toast.success("Product created successfully");
     } catch (e) {
       console.error(e);
@@ -489,9 +572,24 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateInventoryItem = (id: string, updates: any) => {
-    toast.error("Product updates disabled for now");
+  const updateProduct = async (id: string, updates: any) => {
+    try {
+      const res = await fetch('/api/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...updates })
+      });
+      if (!res.ok) throw new Error("Failed to update product");
+      await Promise.all([fetchProducts(), fetchInventory()]);
+      toast.success("Product updated successfully");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to update product");
+    }
   };
+
+  // Legacy/Deprecated wrappers if needed, but per request we are doing STRICT cleanup.
+  // We will simply NOT expose addInventoryItem/updateInventoryItem anymore.
 
   // Master Data Actions
   const addCategory = async (cat: Omit<Category, 'id'>) => {
@@ -570,7 +668,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     setRoutes(routes.map(r => ({
       ...r,
       customerIds: r.id === routeId
-        ? [...new Set([...r.customerIds, ...ids])]
+        ? Array.from(new Set([...r.customerIds, ...ids]))
         : r.customerIds.filter(cid => !ids.includes(cid))
     })));
     // Update customer's routeId
@@ -600,7 +698,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AdminContext.Provider value={{
-      leads, customers, orders, inventory, categories, subcategories, units, priceTiers, walletTransactions,
+      leads, customers, orders, inventory, products, categories, subcategories, units, priceTiers, walletTransactions,
       employees, employeeRoles, routes, isAuthenticated,
       websiteLinks, partners, banners,
       currentUser, setCurrentUser,
@@ -609,7 +707,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       addCustomer, updateCustomer,
       addLead, updateLead, deleteLead,
       addOrder, updateOrder, bulkUpdateOrderStatus,
-      addInventoryItem, updateInventoryItem, adjustInventory,
+      fetchProducts, addProduct, updateProduct,
+      adjustInventory,
       addCategory, updateCategory, deleteCategory,
       addSubcategory, updateSubcategory, deleteSubcategory,
       addUnit, updateUnit, deleteUnit,

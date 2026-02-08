@@ -56,6 +56,7 @@ model Product {
   InventoryAdjustment InventoryAdjustment[]
   OrderItem OrderItem[]
   
+  basePrice     Float
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 }
@@ -84,7 +85,7 @@ model ProductVariant {
   id               String      @id @default(uuid())
   productId        String
   name             String
-  price            Float
+  price            Float?      // Null = use basePrice * conversionFactor
   conversionFactor Float       @default(1.0)
   product          Product     @relation(fields: [productId], references: [id])
   OrderItem        OrderItem[]

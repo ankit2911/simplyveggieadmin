@@ -2,17 +2,19 @@
 
 import React, { useState } from 'react';
 import { useAdmin, type InventoryItem } from '../context/AdminContext';
-import { History, Eye, Download } from 'lucide-react';
+import { History, Eye, Download, Package } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function InventoryPageNew() {
-  const { inventory, adjustInventory } = useAdmin();
+  const { inventory, products, adjustInventory } = useAdmin();
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
 
   // Adjustment Modal State
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
-  const [delta, setDelta] = useState<number | ''>('');
+  const [delta, setDelta] = useState<string>('');
+  const [adjustmentType, setAdjustmentType] = useState('CORRECTION');
   const [reason, setReason] = useState('');
+  const [selectedVariantId, setSelectedVariantId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Filter out items without proper inventory data
@@ -24,12 +26,12 @@ export function InventoryPageNew() {
 
     setIsSubmitting(true);
     try {
-      // Determine type based on delta sign
-      const type = Number(delta) > 0 ? 'RECEIPT' : 'CORRECTION';
-      await adjustInventory(adjustItem.id, Number(delta), type, reason);
+      await adjustInventory(adjustItem.id, Number(delta), adjustmentType, reason, selectedVariantId || undefined);
       setAdjustItem(null);
       setDelta('');
       setReason('');
+      setSelectedVariantId('');
+      setAdjustmentType('CORRECTION');
     } catch (error) {
       // Error handled in context
     } finally {
@@ -48,18 +50,18 @@ export function InventoryPageNew() {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-100">
+          <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Item</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Category</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Unit</th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Actual Stock</th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Upcoming</th>
-              <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase">Net Available</th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Item</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Unit</th>
+              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actual Stock</th>
+              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Upcoming</th>
+              <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Net Available</th>
+              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-gray-100">
             {validInventory.map((item) => {
               const netAvailable = item.actualStock + item.upcomingStock;
               return (
@@ -105,8 +107,16 @@ export function InventoryPageNew() {
             })}
             {validInventory.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-gray-400">
-                  No inventory data found.
+                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                  <div className="flex flex-col items-center justify-center py-8">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                      <Package className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">No Inventory Found</h3>
+                    <p className="max-w-sm text-sm text-gray-500">
+                      We couldn't find any items with valid units. Please ensure your items are configured correctly.
+                    </p>
+                  </div>
                 </td>
               </tr>
             )}
@@ -129,13 +139,45 @@ export function InventoryPageNew() {
                 <div className="text-sm text-gray-500">Current Stock: {adjustItem.actualStock}</div>
               </div>
 
+              {products.find(p => p.id === adjustItem.id)?.variants?.length ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit / Pack</label>
+                  <select
+                    value={selectedVariantId}
+                    onChange={(e) => setSelectedVariantId(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                  >
+                    <option value="">Base Unit ({adjustItem.unit.symbol})</option>
+                    {products.find(p => p.id === adjustItem.id)?.variants?.map(v => (
+                      <option key={v.id} value={v.id}>
+                        {v.name} (x{v.conversionFactor})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Adjustment Type</label>
+                <select
+                  value={adjustmentType}
+                  onChange={(e) => setAdjustmentType(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                >
+                  <option value="RECEIPT">Receipt (Add Stock)</option>
+                  <option value="CORRECTION">Correction (Adjust +/-)</option>
+                  <option value="DAMAGE">Damage (Remove Stock)</option>
+                  <option value="WASTE">Waste (Remove Stock)</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Adjustment Amount (+/-)</label>
                 <input
                   type="number"
                   step="any"
                   value={delta}
-                  onChange={(e) => setDelta(e.target.value === '' ? '' : Number(e.target.value))}
+                  onChange={(e) => setDelta(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   placeholder="e.g. 10 or -5"
                   required
@@ -163,7 +205,7 @@ export function InventoryPageNew() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || delta === '' || delta === 0}
+                  disabled={isSubmitting || delta === '' || Number(delta) === 0}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? 'Saving...' : 'Save Adjustment'}

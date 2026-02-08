@@ -1,8 +1,8 @@
 {
-  "/not-found": "app/not-found.js",
-  "/api/units/route": "app/api/units/route.js",
-  "/page": "app/page.js",
-  "/api/subcategories/route": "app/api/subcategories/route.js",
-  "/api/inventory/route": "app/api/inventory/route.js",
-  "/api/categories/route": "app/api/categories/route.js"
+  "/(admin)/orders/page": "app/(admin)/orders/page.js",
+  "/(admin)/page": "app/(admin)/page.js",
+  "/(admin)/routes/page": "app/(admin)/routes/page.js",
+  "/(admin)/employees/page": "app/(admin)/employees/page.js",
+  "/(admin)/pricingTiers/page": "app/(admin)/pricingTiers/page.js",
+  "/(admin)/roles/page": "app/(admin)/roles/page.js"
 }
