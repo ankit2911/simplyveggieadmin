@@ -1,9 +1,9 @@
 {
   "pages": {
-    "/(admin)/customers/page": [
+    "/(admin)/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(admin)/customers/page.js"
+      "static/chunks/app/(admin)/page.js"
     ],
     "/(admin)/layout": [
       "static/chunks/webpack.js",
@@ -16,30 +16,15 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/(admin)/configuration/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(admin)/configuration/page.js"
-    ],
-    "/(admin)/items/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(admin)/items/page.js"
-    ],
-    "/(admin)/inventory/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(admin)/inventory/page.js"
-    ],
-    "/(admin)/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(admin)/page.js"
-    ],
     "/(admin)/orders/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(admin)/orders/page.js"
+    ],
+    "/(admin)/configuration/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(admin)/configuration/page.js"
     ],
     "/(admin)/employees/page": [
       "static/chunks/webpack.js",
@@ -51,20 +36,15 @@
       "static/chunks/main-app.js",
       "static/chunks/app/(admin)/routes/page.js"
     ],
-    "/(admin)/pricing/page": [
+    "/(admin)/customers/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(admin)/pricing/page.js"
+      "static/chunks/app/(admin)/customers/page.js"
     ],
-    "/(admin)/roles/page": [
+    "/not-found": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(admin)/roles/page.js"
-    ],
-    "/(admin)/pricingTiers/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(admin)/pricingTiers/page.js"
+      "static/chunks/app/not-found.js"
     ]
   }
 }

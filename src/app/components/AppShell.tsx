@@ -35,20 +35,20 @@ const tabs = [
   { id: 'customers', label: 'Customers', icon: Users, href: '/customers' },
   { id: 'routes', label: 'Routes', icon: MapPin, href: '/routes' },
   { id: 'employees', label: 'Employees', icon: Briefcase, href: '/employees' },
-  { id: 'roles', label: 'Employee Roles', icon: UserCog, href: '/roles' },
+
   { id: 'configuration', label: 'Configuration', icon: Settings, href: '/configuration' },
   { id: 'pricingTiers', label: 'Pricing Tiers', icon: Layers, href: '/pricingTiers' },
   { id: 'wallets', label: 'Wallets', icon: Wallet, href: '/wallets' },
 ];
 
 export function AppShell({ children }: LayoutProps) {
-  const { logout: onLogout, isAuthenticated, login } = useAdmin();
+  const { logout: onLogout, isAuthenticated, login, currentUser, hasPermission } = useAdmin();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
-  const handleLogin = (email: string, pass: string) => {
-    if (!login(email, pass)) {
+  const handleLogin = async (email: string, pass: string) => {
+    if (!await login(email, pass)) {
       alert('Invalid credentials');
     }
   };
@@ -93,7 +93,7 @@ export function AppShell({ children }: LayoutProps) {
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 overflow-y-auto">
-            {tabs.map((tab) => {
+            {tabs.filter(tab => hasPermission(tab.id) || hasPermission('all')).map((tab) => {
               const Icon = tab.icon;
               const isActive = pathname.startsWith(tab.href);
 
@@ -123,8 +123,8 @@ export function AppShell({ children }: LayoutProps) {
                 <UserCog className="w-5 h-5 text-green-700" />
               </div>
               <div className="flex-1">
-                <div className="text-sm font-semibold text-gray-900">Super Admin</div>
-                <div className="text-xs text-gray-500">admin@example.com</div>
+                <div className="text-sm font-semibold text-gray-900">{currentUser?.name || 'User'}</div>
+                <div className="text-xs text-gray-500">{currentUser?.email || ''}</div>
               </div>
             </div>
             <button

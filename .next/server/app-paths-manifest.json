@@ -1,8 +1,8 @@
 {
-  "/(admin)/orders/page": "app/(admin)/orders/page.js",
+  "/not-found": "app/not-found.js",
   "/(admin)/page": "app/(admin)/page.js",
-  "/(admin)/routes/page": "app/(admin)/routes/page.js",
+  "/(admin)/configuration/page": "app/(admin)/configuration/page.js",
   "/(admin)/employees/page": "app/(admin)/employees/page.js",
-  "/(admin)/pricingTiers/page": "app/(admin)/pricingTiers/page.js",
-  "/(admin)/roles/page": "app/(admin)/roles/page.js"
+  "/(admin)/routes/page": "app/(admin)/routes/page.js",
+  "/(admin)/customers/page": "app/(admin)/customers/page.js"
 }

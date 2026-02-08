@@ -208,10 +208,7 @@ export interface WalletTransaction {
 export interface EmployeeRole {
   id: string;
   name: string;
-  permissions: {
-    appAccess: boolean;
-    modules: string[];
-  };
+  permissions: any; // Using 'any' for now to match JSON structure from DB
 }
 
 export interface Employee {
@@ -219,18 +216,20 @@ export interface Employee {
   name: string;
   phone?: string;
   email?: string;
-  roleIds: string[];
+  roleId: string; // Changed from roleIds[] to single roleId
+  role?: EmployeeRole;
   isActive: boolean;
   createdAt: string;
+  password?: string; // Optional for UI, handled by API
 }
 
 export interface Route {
   id: string;
   name: string;
   code: string;
-  city: string;
-  state: string;
-  customerIds: string[];
+  city?: string;
+  description?: string;
+  customerIds?: string[]; // Helper for UI, might need computed on fetch
 }
 
 export interface WebsiteLinks {
@@ -272,10 +271,11 @@ interface AdminContextType {
   partners: Partner[];
   banners: Banner[];
   isAuthenticated: boolean;
-  login: (email: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   currentUser: Employee | null;
   setCurrentUser: (user: Employee | null) => void;
+  hasPermission: (module: string) => boolean;
   resetData: () => void;
   // Methods
   addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void;
@@ -314,11 +314,15 @@ interface AdminContextType {
 
   addWalletTransaction: (transaction: Omit<WalletTransaction, 'id' | 'timestamp'>) => void;
   updateWallet: (customerId: string, amount: number) => void;
-  addEmployeeRole: (role: Omit<EmployeeRole, 'id'>) => void;
-  addEmployee: (employee: Omit<Employee, 'id' | 'createdAt'>) => void;
-  updateEmployee: (id: string, employee: Partial<Employee>) => void;
-  addRoute: (route: Omit<Route, 'id'>) => void;
-  updateRoute: (id: string, route: Partial<Route>) => void;
+  addEmployeeRole: (role: Omit<EmployeeRole, 'id'>) => Promise<void>;
+  addEmployee: (employee: Omit<Employee, 'id' | 'createdAt'>) => Promise<void>;
+  updateEmployee: (id: string, employee: Partial<Employee>) => Promise<void>;
+  deleteEmployee: (id: string) => Promise<void>;
+  deleteEmployeeRole: (id: string) => Promise<void>;
+
+  addRoute: (route: Omit<Route, 'id'>) => Promise<void>;
+  updateRoute: (id: string, route: Partial<Route>) => Promise<void>;
+  deleteRoute: (id: string) => Promise<void>;
   bulkAssignRoute: (customerIds: string[], routeId: string) => void;
   removeCustomerFromRoute: (customerId: string) => void;
   // Website Config
@@ -335,16 +339,15 @@ const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<Employee | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize DB on mount
   // Initialize DB on mount
   useEffect(() => {
     setIsInitialized(true);
   }, []);
 
   // Initialize Data from localStorage (with mockDb fallback)
-  // Initialize Data from localStorage (with empty fallback)
   const [leads, setLeads] = useState<Lead[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -371,15 +374,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [pricingRules, setPricingRules] = useState<PricingRule[]>(() => loadData(KEYS.pricingRules, []));
 
   // Auto-save to localStorage on state changes
-  // Auto-save to localStorage on state changes (only for legacy sections)
-  // Inventory, Units, Categories, Subcategories are now DB-backed and do not use localStorage
   useEffect(() => { if (isInitialized) saveData(KEYS.leads, leads); }, [leads, isInitialized]);
   useEffect(() => { if (isInitialized) saveData(KEYS.customers, customers); }, [customers, isInitialized]);
   useEffect(() => { if (isInitialized) saveData(KEYS.orders, orders); }, [orders, isInitialized]);
-  // useEffect(() => { if (isInitialized) saveData(KEYS.inventory, inventory); }, [inventory, isInitialized]);
-  // useEffect(() => { if (isInitialized) saveData(KEYS.units, units); }, [units, isInitialized]);
-  // useEffect(() => { if (isInitialized) saveData(KEYS.categories, categories); }, [categories, isInitialized]);
-  // useEffect(() => { if (isInitialized) saveData(KEYS.subcategories, subcategories); }, [subcategories, isInitialized]);
   useEffect(() => { if (isInitialized) saveData(KEYS.priceTiers, priceTiers); }, [priceTiers, isInitialized]);
   useEffect(() => { if (isInitialized) saveData(KEYS.roles, employeeRoles); }, [employeeRoles, isInitialized]);
   useEffect(() => { if (isInitialized) saveData(KEYS.employees, employees); }, [employees, isInitialized]);
@@ -388,8 +385,6 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { if (isInitialized) saveData(KEYS.partners, partners); }, [partners, isInitialized]);
   useEffect(() => { if (isInitialized) saveData(KEYS.banners, banners); }, [banners, isInitialized]);
   useEffect(() => { if (isInitialized) saveData(KEYS.pricingRules, pricingRules); }, [pricingRules, isInitialized]);
-
-  // --- Actions ---
 
   // --- Actions ---
 
@@ -409,7 +404,6 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         category: p.category,
         subcategory: p.subcategory,
         unit: p.unit,
-        // basePrice removed
         actualStock: p.inventory?.actualStock ?? 0,
         upcomingStock: p.inventory?.upcomingStock ?? 0,
         adjustments: p.InventoryAdjustment,
@@ -426,7 +420,6 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch('/api/products');
       if (!res.ok) throw new Error('Failed to fetch products');
       const data = await res.json();
-      // Ensure strict typing
       const mappedProducts: Product[] = data.map((p: any) => ({
         id: p.id,
         name: p.name,
@@ -450,15 +443,21 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const fetchMasters = async () => {
     try {
-      const [uRes, cRes, sRes] = await Promise.all([
+      const [uRes, cRes, sRes, eRes, erRes, rRes] = await Promise.all([
         fetch('/api/units'),
         fetch('/api/categories'),
-        fetch('/api/subcategories')
+        fetch('/api/subcategories'),
+        fetch('/api/employees'),
+        fetch('/api/roles'),
+        fetch('/api/routes')
       ]);
 
       if (uRes.ok) setUnits(await uRes.json());
       if (cRes.ok) setCategories(await cRes.json());
       if (sRes.ok) setSubcategories(await sRes.json());
+      if (eRes.ok) setEmployees(await eRes.json());
+      if (erRes.ok) setEmployeeRoles(await erRes.json());
+      if (rRes.ok) setRoutes(await rRes.json());
 
     } catch (e) {
       console.error("Failed to load masters", e);
@@ -468,14 +467,6 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const initializeDb = async () => {
     await Promise.all([fetchInventory(), fetchProducts(), fetchMasters()]);
-
-    // Load other mock data for now
-    setCustomers(loadData(KEYS.customers, []));
-    setOrders(loadData(KEYS.orders, []));
-    setPriceTiers(loadData(KEYS.priceTiers, []));
-    setRoutes(loadData(KEYS.routes, []));
-    setEmployees(loadData(KEYS.employees, []));
-
     setIsInitialized(true);
   };
 
@@ -483,8 +474,44 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     initializeDb();
   }, []);
 
-  const login = (email: string, pass: string) => { setIsAuthenticated(true); return true; };
-  const logout = () => setIsAuthenticated(false);
+  const login = async (email: string, pass: string) => {
+    const user = employees.find(e => e.email === email && e.password === pass && e.isActive);
+
+    if (user) {
+      const role = employeeRoles.find(r => r.id === user.roleId);
+      const fullUser = { ...user, role };
+      setCurrentUser(fullUser);
+      setIsAuthenticated(true);
+      return true;
+    }
+
+    if (email === 'admin@example.com' && (pass === 'admin' || pass === '12345678')) {
+      setIsAuthenticated(true);
+      setCurrentUser({
+        id: 'admin',
+        name: 'Super Admin',
+        email,
+        roleId: 'admin',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        role: { id: 'admin', name: 'Super Admin', permissions: { appAccess: true, modules: ['all'] } }
+      });
+      return true;
+    }
+
+    return false;
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+  };
+
+  const hasPermission = (module: string) => {
+    if (!currentUser || !currentUser.role) return false;
+    if (currentUser.role.permissions.modules.includes('all')) return true;
+    return currentUser.role.permissions.modules.includes(module);
+  };
 
   const resetData = () => {
     window.location.reload();
@@ -515,15 +542,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(order)
       });
       if (!res.ok) throw new Error("Failed to create order");
-
-      // Refresh orders and inventory
-      await Promise.all([
-        // fetchOrders(), // You might need to add fetchOrders if it exists or reload
-        // For now, re-fetch everything or minimal
-        fetchInventory() // Inventory surely changed
-      ]);
-
-      // Manually update local state for immediate feedback (optional, or just reload)
+      await fetchInventory();
       window.location.reload();
     } catch (e) {
       console.error(e);
@@ -537,7 +556,6 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     setOrders(orders.map(o => ids.includes(o.id) ? { ...o, status, updatedAt: new Date().toISOString() } : o));
   };
 
-  // Inventory Mutations
   const adjustInventory = async (productId: string, delta: number, type: string, reason?: string, variantId?: string) => {
     try {
       const res = await fetch('/api/inventory/adjust', {
@@ -555,7 +573,6 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Product CRUD
   const addProduct = async (product: any) => {
     try {
       const res = await fetch('/api/products', {
@@ -588,14 +605,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Legacy/Deprecated wrappers if needed, but per request we are doing STRICT cleanup.
-  // We will simply NOT expose addInventoryItem/updateInventoryItem anymore.
-
-  // Master Data Actions
   const addCategory = async (cat: Omit<Category, 'id'>) => {
     try {
       await fetch('/api/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cat) });
-      fetchMasters(); // Refresh
+      fetchMasters();
     } catch (e) { console.error(e); toast.error("Failed to add category"); }
   };
   const updateCategory = (id: string, updates: Partial<Category>) => { toast.info("Update not implemented yet"); };
@@ -640,7 +653,6 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const addPriceTier = (tier: Omit<PriceTier, 'id'>) => setPriceTiers([...priceTiers, { ...tier, id: `t${Date.now()}` }]);
   const updatePriceTier = (id: string, updates: Partial<PriceTier>) => setPriceTiers(priceTiers.map(t => t.id === id ? { ...t, ...updates } : t));
 
-  // Pricing Rules CRUD
   const addPricingRule = (rule: Omit<PricingRule, 'id'>) => setPricingRules([...pricingRules, { ...rule, id: `pr${Date.now()}` }]);
   const updatePricingRule = (id: string, updates: Partial<PricingRule>) => setPricingRules(pricingRules.map(r => r.id === id ? { ...r, ...updates } : r));
   const deletePricingRule = (id: string) => setPricingRules(pricingRules.filter(r => r.id !== id));
@@ -658,33 +670,75 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     addWalletTransaction({ customerId: cid, amount: Math.abs(amt), type: amt > 0 ? 'credit' : 'debit', description: 'Manual Adjustment' });
   };
 
-  const addEmployeeRole = (r: Omit<EmployeeRole, 'id'>) => setEmployeeRoles([...employeeRoles, { ...r, id: `er${Date.now()}` }]);
-  const addEmployee = (e: Omit<Employee, 'id' | 'createdAt'>) => setEmployees([...employees, { ...e, id: `e${Date.now()}`, createdAt: new Date().toISOString() }]);
-  const updateEmployee = (id: string, upd: Partial<Employee>) => setEmployees(employees.map(e => e.id === id ? { ...e, ...upd } : e));
-  const addRoute = (r: Omit<Route, 'id'>) => setRoutes([...routes, { ...r, id: `r${Date.now()}` }]);
-  const updateRoute = (id: string, upd: Partial<Route>) => setRoutes(routes.map(r => r.id === id ? { ...r, ...upd } : r));
-  const bulkAssignRoute = (ids: string[], routeId: string) => {
-    // Also remove customers from their old routes (customerIds array)
-    setRoutes(routes.map(r => ({
-      ...r,
-      customerIds: r.id === routeId
-        ? Array.from(new Set([...r.customerIds, ...ids]))
-        : r.customerIds.filter(cid => !ids.includes(cid))
-    })));
-    // Update customer's routeId
-    setCustomers(customers.map(c => ids.includes(c.id) ? { ...c, routeId } : c));
+  const bulkAssignRoute = (customerIds: string[], routeId: string) => {
+    setCustomers(customers.map(c => customerIds.includes(c.id) ? { ...c, routeId } : c));
   };
+
   const removeCustomerFromRoute = (customerId: string) => {
-    // Remove from routes.customerIds
-    setRoutes(routes.map(r => ({
-      ...r,
-      customerIds: r.customerIds.filter(cid => cid !== customerId)
-    })));
-    // Clear customer.routeId
     setCustomers(customers.map(c => c.id === customerId ? { ...c, routeId: undefined } : c));
   };
 
-  // Website Config
+  const addEmployee = async (employee: any) => {
+    try {
+      await fetch('/api/employees', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(employee) });
+      fetchMasters();
+      toast.success("Employee added");
+    } catch (e) { console.error(e); toast.error("Failed to add employee"); }
+  };
+  const updateEmployee = async (id: string, updates: any) => {
+    try {
+      await fetch('/api/employees', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, ...updates }) });
+      fetchMasters();
+      toast.success("Employee updated");
+    } catch (e) { console.error(e); toast.error("Failed to update employee"); }
+  };
+  const deleteEmployee = async (id: string) => {
+    try {
+      await fetch(`/api/employees?id=${id}`, { method: 'DELETE' });
+      fetchMasters();
+      toast.success("Employee deleted");
+    } catch (e) { toast.error("Failed to delete employee"); }
+  };
+
+  const addEmployeeRole = async (role: any) => {
+    try {
+      await fetch('/api/roles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(role) });
+      fetchMasters();
+      toast.success("Role added");
+    } catch (e) { console.error(e); toast.error("Failed to add role"); }
+  };
+  const deleteEmployeeRole = async (id: string) => {
+    try {
+      await fetch(`/api/roles?id=${id}`, { method: 'DELETE' });
+      fetchMasters();
+      toast.success("Role deleted");
+    } catch (e) { toast.error("Failed to delete role"); }
+  };
+
+  const addRoute = async (route: any) => {
+    try {
+      await fetch('/api/routes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(route) });
+      fetchMasters();
+      toast.success("Route added");
+    } catch (e) { console.error(e); toast.error("Failed to add route"); }
+  };
+
+  const updateRoute = async (id: string, updates: any) => {
+    try {
+      await fetch('/api/routes', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, ...updates }) });
+      fetchMasters();
+      toast.success("Route updated");
+    } catch (e) { console.error(e); toast.error("Failed to update route"); }
+  };
+
+  const deleteRoute = async (id: string) => {
+    try {
+      await fetch(`/api/routes?id=${id}`, { method: 'DELETE' });
+      fetchMasters();
+      toast.success("Route deleted");
+    } catch (e) { toast.error("Failed to delete route"); }
+  };
+
   const updateWebsiteLinks = (links: Partial<WebsiteLinks>) => setWebsiteLinks({ ...websiteLinks, ...links });
   const addPartner = (p: Omit<Partner, 'id'>) => setPartners([...partners, { ...p, id: `p${Date.now()}` }]);
   const updatePartner = (id: string, upd: Partial<Partner>) => setPartners(partners.map(p => p.id === id ? { ...p, ...upd } : p));
@@ -694,14 +748,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const updateBanner = (id: string, upd: Partial<Banner>) => setBanners(banners.map(b => b.id === id ? { ...b, ...upd } : b));
   const deleteBanner = (id: string) => setBanners(banners.filter(b => b.id !== id));
 
-  const [currentUser, setCurrentUser] = useState<Employee | null>(null);
-
   return (
     <AdminContext.Provider value={{
       leads, customers, orders, inventory, products, categories, subcategories, units, priceTiers, walletTransactions,
       employees, employeeRoles, routes, isAuthenticated,
       websiteLinks, partners, banners,
-      currentUser, setCurrentUser,
+      currentUser, setCurrentUser, hasPermission,
       resetData,
       login, logout,
       addCustomer, updateCustomer,
@@ -715,8 +767,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       addPriceTier, updatePriceTier,
       pricingRules, addPricingRule, updatePricingRule, deletePricingRule,
       addWalletTransaction, updateWallet,
-      addEmployeeRole, addEmployee, updateEmployee,
-      addRoute, updateRoute, bulkAssignRoute, removeCustomerFromRoute,
+      addEmployeeRole, deleteEmployeeRole,
+      addEmployee, updateEmployee, deleteEmployee,
+      addRoute, updateRoute, deleteRoute,
+      bulkAssignRoute, removeCustomerFromRoute,
       updateWebsiteLinks,
       addPartner, updatePartner, deletePartner,
       addBanner, updateBanner, deleteBanner
