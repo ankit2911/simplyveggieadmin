@@ -8,7 +8,6 @@ import {
   Package,
   DollarSign,
   Wallet,
-  UserCog,
   Briefcase,
   MapPin,
   Menu,
@@ -17,7 +16,7 @@ import {
   Box,
   Settings,
   Layers,
-  Carrot
+  LayoutDashboard
 } from 'lucide-react';
 
 import { useAdmin } from '../context/AdminContext';
@@ -28,6 +27,7 @@ interface LayoutProps {
 }
 
 const tabs = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/' },
   { id: 'orders', label: 'Live Orders', icon: ShoppingCart, href: '/orders' },
   { id: 'inventory', label: 'Inventory (Stock)', icon: Package, href: '/inventory' },
   { id: 'items', label: 'Item Definitions', icon: Box, href: '/items' },
@@ -35,7 +35,6 @@ const tabs = [
   { id: 'customers', label: 'Customers', icon: Users, href: '/customers' },
   { id: 'routes', label: 'Routes', icon: MapPin, href: '/routes' },
   { id: 'employees', label: 'Employees', icon: Briefcase, href: '/employees' },
-
   { id: 'configuration', label: 'Configuration', icon: Settings, href: '/configuration' },
   { id: 'pricingTiers', label: 'Pricing Tiers', icon: Layers, href: '/pricingTiers' },
   { id: 'wallets', label: 'Wallets', icon: Wallet, href: '/wallets' },
@@ -53,49 +52,297 @@ export function AppShell({ children }: LayoutProps) {
     }
   };
 
-  // If not authenticated, render Login Page
   if (!isAuthenticated) {
     return <LoginPage onLogin={handleLogin} />;
   }
 
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    return pathname.startsWith(href);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
+    <>
+      <style>{`
+        .app-container {
+          display: flex;
+          min-height: 100vh;
+          background: #fafafa;
+        }
+        .sidebar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          bottom: 0;
+          width: 240px;
+          background: white;
+          border-right: 1px solid #e5e7eb;
+          display: flex;
+          flex-direction: column;
+          z-index: 40;
+          transform: translateX(-100%);
+          transition: transform 0.3s ease;
+        }
+        .sidebar.open {
+          transform: translateX(0);
+        }
+        @media (min-width: 1024px) {
+          .sidebar {
+            transform: translateX(0);
+          }
+        }
+        .sidebar-header {
+          padding: 16px 20px;
+          border-bottom: 1px solid #e5e7eb;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .logo-icon {
+          width: 40px;
+          height: 40px;
+          background: linear-gradient(135deg, #f39c12, #e67e22);
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+        }
+        .logo-text {
+          display: flex;
+          flex-direction: column;
+        }
+        .logo-simply {
+          font-size: 12px;
+          font-weight: 600;
+          color: #666;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .logo-veggie {
+          font-size: 18px;
+          font-weight: 800;
+          color: #108542;
+          text-transform: uppercase;
+          margin-top: -2px;
+        }
+        .logo-tagline {
+          font-size: 9px;
+          color: #999;
+          font-style: italic;
+        }
+        .nav-section {
+          flex: 1;
+          overflow-y: auto;
+          padding: 12px 8px;
+        }
+        .nav-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 16px;
+          margin: 2px 0;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 500;
+          color: #4b5563;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          border: none;
+          background: transparent;
+          width: 100%;
+          text-align: left;
+        }
+        .nav-item:hover {
+          background: #f3f4f6;
+          color: #111;
+        }
+        .nav-item.active {
+          background: #dcfce7;
+          color: #108542;
+        }
+        .nav-item svg {
+          width: 18px;
+          height: 18px;
+          flex-shrink: 0;
+        }
+        .user-section {
+          padding: 16px;
+          border-top: 1px solid #e5e7eb;
+          background: #fafafa;
+        }
+        .user-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 12px;
+        }
+        .user-avatar {
+          width: 36px;
+          height: 36px;
+          background: linear-gradient(135deg, #2ecc71, #108542);
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: 600;
+          font-size: 14px;
+        }
+        .user-info {
+          flex: 1;
+          min-width: 0;
+        }
+        .user-name {
+          font-size: 13px;
+          font-weight: 600;
+          color: #111;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .user-email {
+          font-size: 11px;
+          color: #666;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .logout-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          width: 100%;
+          padding: 8px;
+          border-radius: 8px;
+          background: transparent;
+          color: #dc2626;
+          font-size: 13px;
+          font-weight: 500;
+          border: none;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .logout-btn:hover {
+          background: #fef2f2;
+        }
+        .copyright {
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid #e5e7eb;
+          text-align: center;
+          font-size: 9px;
+          color: #9ca3af;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .main-content {
+          flex: 1;
+          margin-left: 0;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+        }
+        @media (min-width: 1024px) {
+          .main-content {
+            margin-left: 240px;
+          }
+        }
+        .main-header {
+          position: sticky;
+          top: 0;
+          background: white;
+          border-bottom: 1px solid #e5e7eb;
+          padding: 0 24px;
+          height: 56px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          z-index: 30;
+        }
+        .header-left {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+        .menu-btn {
+          display: flex;
+          padding: 8px;
+          border-radius: 8px;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+        }
+        .menu-btn:hover {
+          background: #f3f4f6;
+        }
+        @media (min-width: 1024px) {
+          .menu-btn {
+            display: none;
+          }
+        }
+        .page-title {
+          font-size: 16px;
+          font-weight: 600;
+          color: #111;
+        }
+        .main-body {
+          flex: 1;
+          padding: 24px;
+        }
+        .backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.4);
+          z-index: 30;
+          display: none;
+        }
+        .backdrop.open {
+          display: block;
+        }
+        @media (min-width: 1024px) {
+          .backdrop {
+            display: none !important;
+          }
+        }
+      `}</style>
+
+      <div className="app-container">
+        {/* Backdrop for mobile */}
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+          className={`backdrop ${sidebarOpen ? 'open' : ''}`}
           onClick={() => setSidebarOpen(false)}
         />
-      )}
 
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center justify-between h-16 px-6 border-b">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white">
-                <Carrot className="w-5 h-5 shrink-0" />
-              </div>
-              <div className="flex flex-col leading-none">
-                <span className="text-xl font-bold text-gray-900 tracking-tight leading-none uppercase font-serif">Simply Veggie</span>
-                <span className="text-[9px] text-gray-500 mt-1 italic font-serif">your kitchen partner</span>
-              </div>
+        {/* Sidebar */}
+        <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+          <div className="sidebar-header">
+            <div className="logo-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2.27 21.7s9.87-3.5 12.73-6.36a4.5 4.5 0 0 0-6.36-6.37C5.77 11.84 2.27 21.7 2.27 21.7z" />
+                <path d="M8.64 14.27a4.5 4.5 0 0 1 5.99-6.01" />
+                <path d="M14 6s3-2 6-2-3 3-3 3" />
+              </svg>
+            </div>
+            <div className="logo-text">
+              <span className="logo-simply">Simply</span>
+              <span className="logo-veggie">VEGGIE</span>
+              <span className="logo-tagline">your kitchen partner</span>
             </div>
             <button
+              className="menu-btn"
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden"
+              style={{ marginLeft: 'auto' }}
             >
-              <X className="w-6 h-6" />
+              <X size={20} color="#666" />
             </button>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 overflow-y-auto">
+          <nav className="nav-section">
             {tabs.filter(tab => hasPermission(tab.id) || hasPermission('all')).map((tab) => {
               const Icon = tab.icon;
-              const isActive = pathname.startsWith(tab.href);
+              const active = isActive(tab.href);
 
               return (
                 <button
@@ -104,82 +351,53 @@ export function AppShell({ children }: LayoutProps) {
                     router.push(tab.href);
                     setSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 mb-1 rounded-lg transition-colors ${isActive
-                    ? 'bg-green-50 text-green-700'
-                    : 'text-gray-700 hover:bg-gray-100'
-                    }`}
+                  className={`nav-item ${active ? 'active' : ''}`}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon />
                   <span>{tab.label}</span>
                 </button>
               );
             })}
           </nav>
 
-          {/* User info & Legal */}
-          <div className="p-4 border-t bg-gray-50">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center border border-green-200">
-                <UserCog className="w-5 h-5 text-green-700" />
+          <div className="user-section">
+            <div className="user-card">
+              <div className="user-avatar">
+                {currentUser?.name?.charAt(0) || 'U'}
               </div>
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-gray-900">{currentUser?.name || 'User'}</div>
-                <div className="text-xs text-gray-500">{currentUser?.email || ''}</div>
+              <div className="user-info">
+                <div className="user-name">{currentUser?.name || 'User'}</div>
+                <div className="user-email">{currentUser?.email || ''}</div>
               </div>
             </div>
-            <button
-              onClick={onLogout}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100 mb-4"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm font-medium">Logout</span>
+            <button onClick={onLogout} className="logout-btn">
+              <LogOut size={16} />
+              <span>Logout</span>
             </button>
-            <div className="pt-2 border-t text-[10px] text-gray-400 text-center uppercase tracking-widest">
-              © {new Date().getFullYear()} FUTURE VEGGIES INDIA PRIVATE LIMITED
+            <div className="copyright">
+              © {new Date().getFullYear()} Future Veggies India<br />Private Limited
             </div>
           </div>
-        </div>
-      </div>
+        </aside>
 
-      {/* Main content */}
-      <div className="lg:ml-64">
-        {/* Header */}
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b sticky top-0 z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden text-gray-500 hover:text-gray-700"
-              >
-                <Menu className="w-6 h-6" />
+        {/* Main content */}
+        <div className="main-content">
+          <header className="main-header">
+            <div className="header-left">
+              <button className="menu-btn" onClick={() => setSidebarOpen(true)}>
+                <Menu size={20} color="#666" />
               </button>
-
-              <h1 className="text-xl font-semibold text-gray-800">
-                {tabs.find(t => pathname.startsWith(t.href))?.label || 'Dashboard'}
+              <h1 className="page-title">
+                {tabs.find(t => isActive(t.href))?.label || 'Dashboard'}
               </h1>
             </div>
+          </header>
 
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                {new Date().toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </span>
-            </div>
-          </div>
-        </header>
-
-        {/* Page content */}
-        <main className="py-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+          <main className="main-body">
             {children}
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
