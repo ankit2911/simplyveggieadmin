@@ -1,8 +1,8 @@
-// File: /Users/agrank/Stuffs/ai_projects/simplyveggieadmin/src/app/(admin)/customers/page.tsx
-import * as entry from '../../../../../src/app/(admin)/customers/page.js'
+// File: /Users/agrank/Stuffs/ai_projects/simply_veggie/svadmin_old/src/app/(admin)/pricingTiers/page.tsx
+import * as entry from '../../../../../src/app/(admin)/pricingTiers/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
-type TEntry = typeof import('../../../../../src/app/(admin)/customers/page.js')
+type TEntry = typeof import('../../../../../src/app/(admin)/pricingTiers/page.js')
 
 // Check that the entry is a valid entry
 checkFields<Diff<{
