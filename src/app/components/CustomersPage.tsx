@@ -13,11 +13,11 @@ export function CustomersPage() {
 
   const salesRole = employeeRoles.find(r => r.name === 'Sales Executive');
   const kamRole = employeeRoles.find(r => r.name === 'Key Account Manager');
-  const salesEmployees = employees.filter(e => e.roleIds.includes(salesRole?.id || ''));
-  const kamEmployees = employees.filter(e => e.roleIds.includes(kamRole?.id || ''));
+  const salesEmployees = employees.filter(e => e.roleId === (salesRole?.id || ''));
+  const kamEmployees = employees.filter(e => e.roleId === (kamRole?.id || ''));
 
-  const isSales = currentUser?.roleIds.includes(salesRole?.id || '');
-  const isKAM = currentUser?.roleIds.includes(kamRole?.id || '');
+  const isSales = currentUser?.roleId === (salesRole?.id || '');
+  const isKAM = currentUser?.roleId === (kamRole?.id || '');
 
   const visibleleads = isSales ? leads.filter(l => l.salesPersonId === currentUser?.id) : leads;
   const visibleCustomers = isKAM ? customers.filter(c => c.keyAccountManagerId === currentUser?.id) : customers;

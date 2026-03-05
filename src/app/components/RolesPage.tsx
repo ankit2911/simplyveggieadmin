@@ -43,7 +43,7 @@ export function RolesPage() {
   };
 
   const getEmployeeCount = (roleId: string) => {
-    return employees.filter(emp => emp.roleIds.includes(roleId) && emp.isActive).length;
+    return employees.filter(emp => emp.roleId === roleId && emp.isActive).length;
   };
 
   return (

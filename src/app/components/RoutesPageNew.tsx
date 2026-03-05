@@ -10,7 +10,7 @@ export function RoutesPageNew() {
   const { routes, customers, addRoute, updateRoute, bulkAssignRoute, removeCustomerFromRoute } = useAdmin();
   const [showForm, setShowForm] = useState(false);
   const [editingRoute, setEditingRoute] = useState<Route | null>(null);
-  const [formData, setFormData] = useState({ name: '', code: '', state: '', city: '' });
+  const [formData, setFormData] = useState({ name: '', code: '', description: '', city: '' });
   const [showCustomersModal, setShowCustomersModal] = useState<string | null>(null);
   const [showBulkAssign, setShowBulkAssign] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState('');
@@ -39,14 +39,14 @@ export function RoutesPageNew() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', code: '', city: '', state: '' });
+    setFormData({ name: '', code: '', city: '', description: '' });
     setShowForm(false);
     setEditingRoute(null);
   };
 
   const handleEdit = (route: Route) => {
     setEditingRoute(route);
-    setFormData({ name: route.name, code: route.code, city: route.city, state: route.state });
+    setFormData({ name: route.name, code: route.code, city: route.city || '', description: route.description || '' });
     setShowForm(true);
   };
 
@@ -93,7 +93,7 @@ export function RoutesPageNew() {
   };
 
   const displayCustomers = assignTab === 'unassigned' ? unassignedCustomers : customers;
-  const availableCities = formData.state ? CITIES_BY_STATE[formData.state] || [] : [];
+  const availableCities = formData.description ? CITIES_BY_STATE[formData.description] || [] : [];
 
   return (
     <>
@@ -233,14 +233,14 @@ export function RoutesPageNew() {
                 </div>
                 <div className="rt-form-group">
                   <label className="rt-label">State *</label>
-                  <select value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value, city: '' })} className="rt-select" required>
+                  <select value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value, city: '' })} className="rt-select" required>
                     <option value="">Select State</option>
                     {INDIAN_STATES.map(state => (<option key={state} value={state}>{state}</option>))}
                   </select>
                 </div>
                 <div className="rt-form-group">
                   <label className="rt-label">City *</label>
-                  <select value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} className="rt-select" required disabled={!formData.state}>
+                  <select value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} className="rt-select" required disabled={!formData.description}>
                     <option value="">Select City</option>
                     {availableCities.map(city => (<option key={city} value={city}>{city}</option>))}
                   </select>
@@ -436,7 +436,7 @@ export function RoutesPageNew() {
                     </td>
                     <td className="rt-td rt-td-name">{route.name}</td>
                     <td className="rt-td rt-td-text">{route.city}</td>
-                    <td className="rt-td rt-td-text">{route.state}</td>
+                    <td className="rt-td rt-td-text">{route.description}</td>
                     <td className="rt-td">
                       <button onClick={() => setShowCustomersModal(route.id)} className="rt-customers-btn">
                         <Users style={{ width: 16, height: 16 }} />
