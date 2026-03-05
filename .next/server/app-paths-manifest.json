@@ -1,7 +1,8 @@
 {
-  "/(admin)/inventory/page": "app/(admin)/inventory/page.js",
   "/(admin)/items/page": "app/(admin)/items/page.js",
+  "/(admin)/pricing/page": "app/(admin)/pricing/page.js",
   "/(admin)/routes/page": "app/(admin)/routes/page.js",
+  "/(admin)/inventory/page": "app/(admin)/inventory/page.js",
   "/(admin)/customers/page": "app/(admin)/customers/page.js",
   "/(admin)/configuration/page": "app/(admin)/configuration/page.js"
 }
