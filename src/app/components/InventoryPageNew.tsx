@@ -40,227 +40,599 @@ export function InventoryPageNew() {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">Inventory Management</h2>
-          <p className="text-gray-600 mt-1">Manage stock levels and view history.</p>
+    <>
+      <style>{`
+        .inv-page-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 24px;
+        }
+        .inv-page-title {
+          font-size: 20px;
+          font-weight: 700;
+          color: #1f2937;
+        }
+        .inv-page-subtitle {
+          color: #6b7280;
+          margin-top: 4px;
+          font-size: 14px;
+        }
+        .inv-table-card {
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+          border: 1px solid #f3f4f6;
+          overflow: hidden;
+        }
+        .inv-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .inv-thead {
+          background: #f9fafb;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .inv-th {
+          padding: 14px 24px;
+          text-align: left;
+          font-size: 11px;
+          font-weight: 600;
+          color: #6b7280;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        .inv-th-right {
+          text-align: right;
+        }
+        .inv-th-bold {
+          font-weight: 700;
+          color: #374151;
+        }
+        .inv-tbody tr {
+          border-bottom: 1px solid #f3f4f6;
+          transition: background 0.15s;
+        }
+        .inv-tbody tr:hover {
+          background: #f9fafb;
+        }
+        .inv-td {
+          padding: 14px 24px;
+        }
+        .inv-td-name {
+          font-weight: 500;
+          color: #111827;
+        }
+        .inv-td-category {
+          color: #6b7280;
+          font-size: 13px;
+        }
+        .inv-td-unit {
+          color: #9ca3af;
+          font-size: 13px;
+        }
+        .inv-td-right {
+          text-align: right;
+        }
+        .inv-stock-value {
+          font-family: ui-monospace, monospace;
+          font-weight: 500;
+          color: #374151;
+        }
+        .inv-stock-negative {
+          color: #dc2626;
+        }
+        .inv-upcoming {
+          color: #9ca3af;
+          font-family: ui-monospace, monospace;
+        }
+        .inv-net-badge {
+          display: inline-block;
+          padding: 2px 10px;
+          border-radius: 9999px;
+          font-size: 13px;
+          font-weight: 700;
+        }
+        .inv-net-positive {
+          background: #dcfce7;
+          color: #15803d;
+        }
+        .inv-net-negative {
+          background: #fee2e2;
+          color: #b91c1c;
+        }
+        .inv-net-zero {
+          background: #f3f4f6;
+          color: #6b7280;
+        }
+        .inv-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 8px;
+        }
+        .inv-btn-adjust {
+          padding: 6px 12px;
+          background: #eff6ff;
+          color: #2563eb;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 500;
+          border: none;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .inv-btn-adjust:hover {
+          background: #dbeafe;
+        }
+        .inv-btn-history {
+          padding: 8px;
+          color: #9ca3af;
+          border: none;
+          background: transparent;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .inv-btn-history:hover {
+          color: #2563eb;
+          background: #eff6ff;
+        }
+        .inv-empty {
+          padding: 48px 24px;
+          text-align: center;
+          color: #9ca3af;
+        }
+        .inv-empty-icon {
+          width: 64px;
+          height: 64px;
+          background: #f9fafb;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 16px;
+        }
+        .inv-empty-title {
+          font-size: 18px;
+          font-weight: 500;
+          color: #111827;
+          margin-bottom: 4px;
+        }
+        .inv-empty-text {
+          max-width: 320px;
+          margin: 0 auto;
+          font-size: 13px;
+          color: #9ca3af;
+        }
+        .inv-modal-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.5);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 50;
+          padding: 16px;
+        }
+        .inv-modal {
+          background: white;
+          border-radius: 16px;
+          box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+          width: 100%;
+          max-width: 448px;
+          overflow: hidden;
+        }
+        .inv-modal-lg {
+          max-width: 512px;
+          display: flex;
+          flex-direction: column;
+          max-height: 80vh;
+        }
+        .inv-modal-header {
+          padding: 16px 24px;
+          border-bottom: 1px solid #f3f4f6;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: #f9fafb;
+        }
+        .inv-modal-title {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1f2937;
+        }
+        .inv-modal-title-sub {
+          margin-left: 8px;
+          font-size: 13px;
+          font-weight: 400;
+          color: #9ca3af;
+        }
+        .inv-modal-close {
+          color: #9ca3af;
+          cursor: pointer;
+          background: none;
+          border: none;
+          font-size: 18px;
+        }
+        .inv-modal-close:hover {
+          color: #6b7280;
+        }
+        .inv-modal-body {
+          padding: 24px;
+        }
+        .inv-form-group {
+          margin-bottom: 16px;
+        }
+        .inv-label {
+          display: block;
+          font-size: 13px;
+          font-weight: 500;
+          color: #374151;
+          margin-bottom: 4px;
+        }
+        .inv-field-value {
+          color: #111827;
+          font-weight: 500;
+        }
+        .inv-field-hint {
+          font-size: 13px;
+          color: #9ca3af;
+        }
+        .inv-input, .inv-select {
+          width: 100%;
+          padding: 8px 12px;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          font-size: 14px;
+          outline: none;
+          transition: box-shadow 0.15s;
+          background: white;
+        }
+        .inv-input:focus, .inv-select:focus {
+          box-shadow: 0 0 0 2px rgba(59,130,246,0.3);
+          border-color: #3b82f6;
+        }
+        .inv-input-hint {
+          font-size: 11px;
+          color: #9ca3af;
+          margin-top: 4px;
+        }
+        .inv-modal-actions {
+          display: flex;
+          gap: 12px;
+          padding-top: 16px;
+        }
+        .inv-btn-cancel {
+          flex: 1;
+          padding: 10px 16px;
+          color: #374151;
+          background: #f3f4f6;
+          border: none;
+          border-radius: 8px;
+          font-weight: 500;
+          cursor: pointer;
+          font-size: 14px;
+        }
+        .inv-btn-cancel:hover {
+          background: #e5e7eb;
+        }
+        .inv-btn-submit {
+          flex: 1;
+          padding: 10px 16px;
+          background: #2563eb;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-weight: 500;
+          cursor: pointer;
+          font-size: 14px;
+        }
+        .inv-btn-submit:hover {
+          background: #1d4ed8;
+        }
+        .inv-btn-submit:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .inv-history-body {
+          padding: 0;
+          overflow-y: auto;
+        }
+        .inv-history-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 13px;
+        }
+        .inv-history-thead {
+          background: #f9fafb;
+          color: #9ca3af;
+        }
+        .inv-history-thead th {
+          padding: 8px 16px;
+          text-align: left;
+          font-weight: 500;
+        }
+        .inv-history-thead th:last-child {
+          text-align: right;
+        }
+        .inv-history-tbody tr {
+          border-bottom: 1px solid #f9fafb;
+        }
+        .inv-history-tbody td {
+          padding: 8px 16px;
+        }
+        .inv-history-date {
+          color: #6b7280;
+        }
+        .inv-history-type {
+          font-weight: 500;
+        }
+        .inv-history-reason {
+          color: #9ca3af;
+        }
+        .inv-history-delta {
+          text-align: right;
+          font-family: ui-monospace, monospace;
+          font-weight: 500;
+        }
+        .inv-delta-positive {
+          color: #16a34a;
+        }
+        .inv-delta-negative {
+          color: #dc2626;
+        }
+        .inv-history-empty {
+          padding: 32px;
+          text-align: center;
+          color: #9ca3af;
+        }
+        .inv-modal-footer {
+          padding: 16px;
+          border-top: 1px solid #f3f4f6;
+          background: #f9fafb;
+          text-align: right;
+        }
+        .inv-btn-close {
+          padding: 8px 16px;
+          color: #6b7280;
+          background: transparent;
+          border: none;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+        }
+        .inv-btn-close:hover {
+          background: #e5e7eb;
+        }
+      `}</style>
+
+      <div>
+        <div className="inv-page-header">
+          <div>
+            <h2 className="inv-page-title">Inventory Management</h2>
+            <p className="inv-page-subtitle">Manage stock levels and view history.</p>
+          </div>
         </div>
-      </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Item</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Unit</th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actual Stock</th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Upcoming</th>
-              <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Net Available</th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {validInventory.map((item) => {
-              const netAvailable = item.actualStock + item.upcomingStock;
-              return (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
-                  <td className="px-6 py-4 text-gray-600 text-sm">{item.category?.name || 'Uncategorized'}</td>
-                  <td className="px-6 py-4 text-gray-500 text-sm">{item.unit.symbol}</td>
+        <div className="inv-table-card">
+          <table className="inv-table">
+            <thead className="inv-thead">
+              <tr>
+                <th className="inv-th">Item</th>
+                <th className="inv-th">Category</th>
+                <th className="inv-th">Unit</th>
+                <th className="inv-th inv-th-right">Actual Stock</th>
+                <th className="inv-th inv-th-right">Upcoming</th>
+                <th className="inv-th inv-th-right inv-th-bold">Net Available</th>
+                <th className="inv-th inv-th-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="inv-tbody">
+              {validInventory.map((item) => {
+                const netAvailable = item.actualStock + item.upcomingStock;
+                return (
+                  <tr key={item.id}>
+                    <td className="inv-td inv-td-name">{item.name}</td>
+                    <td className="inv-td inv-td-category">{item.category?.name || 'Uncategorized'}</td>
+                    <td className="inv-td inv-td-unit">{item.unit.symbol}</td>
 
-                  <td className="px-6 py-4 text-right">
-                    <span className={`font-mono font-medium ${item.actualStock < 0 ? 'text-red-600' : 'text-gray-700'}`}>
-                      {item.actualStock}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right text-gray-500 font-mono">
-                    {item.upcomingStock > 0 ? `+${item.upcomingStock}` : item.upcomingStock}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className={`px-2.5 py-0.5 rounded-full text-sm font-bold ${netAvailable < 0 ? 'bg-red-100 text-red-700' :
-                      netAvailable === 0 ? 'bg-gray-100 text-gray-600' :
-                        'bg-green-100 text-green-700'
-                      }`}>
-                      {netAvailable}
-                    </span>
-                  </td>
+                    <td className="inv-td inv-td-right">
+                      <span className={`inv-stock-value ${item.actualStock < 0 ? 'inv-stock-negative' : ''}`}>
+                        {item.actualStock}
+                      </span>
+                    </td>
+                    <td className="inv-td inv-td-right inv-upcoming">
+                      {item.upcomingStock > 0 ? `+${item.upcomingStock}` : item.upcomingStock}
+                    </td>
+                    <td className="inv-td inv-td-right">
+                      <span className={`inv-net-badge ${netAvailable < 0 ? 'inv-net-negative' :
+                        netAvailable === 0 ? 'inv-net-zero' :
+                          'inv-net-positive'
+                        }`}>
+                        {netAvailable}
+                      </span>
+                    </td>
 
-                  <td className="px-6 py-4 text-right flex justify-end gap-2">
-                    <button
-                      onClick={() => setAdjustItem(item)}
-                      className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
-                    >
-                      Adjust
-                    </button>
-                    <button
-                      onClick={() => setSelectedItem(item)}
-                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="View History"
-                    >
-                      <History className="w-4 h-4" />
-                    </button>
+                    <td className="inv-td inv-td-right">
+                      <div className="inv-actions">
+                        <button
+                          onClick={() => setAdjustItem(item)}
+                          className="inv-btn-adjust"
+                        >
+                          Adjust
+                        </button>
+                        <button
+                          onClick={() => setSelectedItem(item)}
+                          className="inv-btn-history"
+                          title="View History"
+                        >
+                          <History className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {validInventory.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="inv-empty">
+                    <div>
+                      <div className="inv-empty-icon">
+                        <Package style={{ width: 32, height: 32, color: '#9ca3af' }} />
+                      </div>
+                      <h3 className="inv-empty-title">No Inventory Found</h3>
+                      <p className="inv-empty-text">
+                        We couldn't find any items with valid units. Please ensure your items are configured correctly.
+                      </p>
+                    </div>
                   </td>
                 </tr>
-              );
-            })}
-            {validInventory.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                  <div className="flex flex-col items-center justify-center py-8">
-                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                      <Package className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-1">No Inventory Found</h3>
-                    <p className="max-w-sm text-sm text-gray-500">
-                      We couldn't find any items with valid units. Please ensure your items are configured correctly.
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
 
-      {/* Adjustment Modal */}
-      {adjustItem && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h3 className="text-lg font-semibold text-gray-800">Adjust Stock</h3>
-              <button onClick={() => setAdjustItem(null)} className="text-gray-400 hover:text-gray-600">✕</button>
-            </div>
-            <form onSubmit={handleAdjustSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Item</label>
-                <div className="text-gray-900 font-medium">{adjustItem.name} ({adjustItem.unit.symbol})</div>
-                <div className="text-sm text-gray-500">Current Stock: {adjustItem.actualStock}</div>
+        {/* Adjustment Modal */}
+        {adjustItem && (
+          <div className="inv-modal-backdrop">
+            <div className="inv-modal">
+              <div className="inv-modal-header">
+                <h3 className="inv-modal-title">Adjust Stock</h3>
+                <button onClick={() => setAdjustItem(null)} className="inv-modal-close">✕</button>
               </div>
+              <form onSubmit={handleAdjustSubmit} className="inv-modal-body">
+                <div className="inv-form-group">
+                  <label className="inv-label">Item</label>
+                  <div className="inv-field-value">{adjustItem.name} ({adjustItem.unit.symbol})</div>
+                  <div className="inv-field-hint">Current Stock: {adjustItem.actualStock}</div>
+                </div>
 
-              {products.find(p => p.id === adjustItem.id)?.variants?.length ? (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit / Pack</label>
+                {products.find(p => p.id === adjustItem.id)?.variants?.length ? (
+                  <div className="inv-form-group">
+                    <label className="inv-label">Unit / Pack</label>
+                    <select
+                      value={selectedVariantId}
+                      onChange={(e) => setSelectedVariantId(e.target.value)}
+                      className="inv-select"
+                    >
+                      <option value="">Base Unit ({adjustItem.unit.symbol})</option>
+                      {products.find(p => p.id === adjustItem.id)?.variants?.map(v => (
+                        <option key={v.id} value={v.id}>
+                          {v.name} (x{v.conversionFactor})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+
+                <div className="inv-form-group">
+                  <label className="inv-label">Adjustment Type</label>
                   <select
-                    value={selectedVariantId}
-                    onChange={(e) => setSelectedVariantId(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                    value={adjustmentType}
+                    onChange={(e) => setAdjustmentType(e.target.value)}
+                    className="inv-select"
                   >
-                    <option value="">Base Unit ({adjustItem.unit.symbol})</option>
-                    {products.find(p => p.id === adjustItem.id)?.variants?.map(v => (
-                      <option key={v.id} value={v.id}>
-                        {v.name} (x{v.conversionFactor})
-                      </option>
-                    ))}
+                    <option value="RECEIPT">Receipt (Add Stock)</option>
+                    <option value="CORRECTION">Correction (Adjust +/-)</option>
+                    <option value="DAMAGE">Damage (Remove Stock)</option>
+                    <option value="WASTE">Waste (Remove Stock)</option>
                   </select>
                 </div>
-              ) : null}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Adjustment Type</label>
-                <select
-                  value={adjustmentType}
-                  onChange={(e) => setAdjustmentType(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                >
-                  <option value="RECEIPT">Receipt (Add Stock)</option>
-                  <option value="CORRECTION">Correction (Adjust +/-)</option>
-                  <option value="DAMAGE">Damage (Remove Stock)</option>
-                  <option value="WASTE">Waste (Remove Stock)</option>
-                </select>
-              </div>
+                <div className="inv-form-group">
+                  <label className="inv-label">Adjustment Amount (+/-)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={delta}
+                    onChange={(e) => setDelta(e.target.value)}
+                    className="inv-input"
+                    placeholder="e.g. 10 or -5"
+                    required
+                  />
+                  <p className="inv-input-hint">Positive to add stock, negative to remove.</p>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Adjustment Amount (+/-)</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={delta}
-                  onChange={(e) => setDelta(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="e.g. 10 or -5"
-                  required
-                />          <p className="text-xs text-gray-500 mt-1">Positive to add stock, negative to remove.</p>
-              </div>
+                <div className="inv-form-group">
+                  <label className="inv-label">Reason (Optional)</label>
+                  <input
+                    type="text"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    className="inv-input"
+                    placeholder="e.g. New Shipment, Damage, Correction"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reason (Optional)</label>
-                <input
-                  type="text"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="e.g. New Shipment, Damage, Correction"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setAdjustItem(null)}
-                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || delta === '' || Number(delta) === 0}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? 'Saving...' : 'Save Adjustment'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* History Modal */}
-      {selectedItem && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h3 className="text-lg font-semibold text-gray-800">
-                {selectedItem.name}
-                <span className="ml-2 text-sm font-normal text-gray-500">({selectedItem.unit.name})</span>
-              </h3>
-              <button onClick={() => setSelectedItem(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+                <div className="inv-modal-actions">
+                  <button
+                    type="button"
+                    onClick={() => setAdjustItem(null)}
+                    className="inv-btn-cancel"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || delta === '' || Number(delta) === 0}
+                    className="inv-btn-submit"
+                  >
+                    {isSubmitting ? 'Saving...' : 'Save Adjustment'}
+                  </button>
+                </div>
+              </form>
             </div>
-            <div className="p-0 overflow-y-auto">
-              {selectedItem.adjustments && selectedItem.adjustments.length > 0 ? (
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 text-gray-500">
-                    <tr>
-                      <th className="px-4 py-2 text-left">Date</th>
-                      <th className="px-4 py-2 text-left">Type</th>
-                      <th className="px-4 py-2 text-left">Reason</th>
-                      <th className="px-4 py-2 text-right">Delta</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {selectedItem.adjustments.map(adj => (
-                      <tr key={adj.id}>
-                        <td className="px-4 py-2 text-gray-600">{new Date(adj.createdAt).toLocaleDateString()}</td>
-                        <td className="px-4 py-2 font-medium">{adj.type}</td>
-                        <td className="px-4 py-2 text-gray-500">{adj.reason || '-'}</td>
-                        <td className={`px-4 py-2 text-right font-mono font-medium ${adj.delta > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {adj.delta > 0 ? '+' : ''}{adj.delta}
-                        </td>
+          </div>
+        )}
+
+        {/* History Modal */}
+        {selectedItem && (
+          <div className="inv-modal-backdrop">
+            <div className="inv-modal inv-modal-lg">
+              <div className="inv-modal-header">
+                <h3 className="inv-modal-title">
+                  {selectedItem.name}
+                  <span className="inv-modal-title-sub">({selectedItem.unit.name})</span>
+                </h3>
+                <button onClick={() => setSelectedItem(null)} className="inv-modal-close">✕</button>
+              </div>
+              <div className="inv-history-body">
+                {selectedItem.adjustments && selectedItem.adjustments.length > 0 ? (
+                  <table className="inv-history-table">
+                    <thead className="inv-history-thead">
+                      <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Reason</th>
+                        <th>Delta</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="p-8 text-center text-gray-400">No recent adjustments.</div>
-              )}
-            </div>
-            <div className="p-4 border-t border-gray-100 bg-gray-50 text-right">
-              <button onClick={() => setSelectedItem(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-medium">Close</button>
+                    </thead>
+                    <tbody className="inv-history-tbody">
+                      {selectedItem.adjustments.map(adj => (
+                        <tr key={adj.id}>
+                          <td className="inv-history-date">{new Date(adj.createdAt).toLocaleDateString()}</td>
+                          <td className="inv-history-type">{adj.type}</td>
+                          <td className="inv-history-reason">{adj.reason || '-'}</td>
+                          <td className={`inv-history-delta ${adj.delta > 0 ? 'inv-delta-positive' : 'inv-delta-negative'}`}>
+                            {adj.delta > 0 ? '+' : ''}{adj.delta}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="inv-history-empty">No recent adjustments.</div>
+                )}
+              </div>
+              <div className="inv-modal-footer">
+                <button onClick={() => setSelectedItem(null)} className="inv-btn-close">Close</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   );
 }

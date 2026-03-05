@@ -13,10 +13,8 @@ export function PricingPageNew() {
   const baseTier = priceTiers.find(t => t.id === 't0');
   const displayTiers = priceTiers.filter(t => selectedTiers.includes(t.id));
 
-  // Helper to get Category Name
   const getCatName = (id: string) => categories.find(c => c.id === id)?.name || 'Uncategorized';
 
-  // Filter items
   const filteredItems = inventory.filter(item =>
     filterCategory === 'all' || item.categoryId === filterCategory
   );
@@ -24,12 +22,8 @@ export function PricingPageNew() {
   const getPriceForTier = (tierId: string, itemId: string) => {
     const tier = priceTiers.find(t => t.id === tierId);
     if (!tier) return 0;
-
-    // Check for override in tier logic
-    // Note: packSize logic removed, assuming PriceTierItem no longer needs packSize or defaults to item's unit
     const tierItem = tier.items?.find(i => i.itemId === itemId);
     if (tierItem) return tierItem.price;
-
     return 0;
   };
 
@@ -72,155 +66,181 @@ export function PricingPageNew() {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl">Pricing</h2>
-          <p className="text-gray-600 mt-1">Manage pricing across different customer tiers</p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={downloadCSV}
-            className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
-          >
-            <Download className="w-4 h-4" />
-            Download CSV
-          </button>
-          <button
-            onClick={() => toast.info('Upload CSV functionality')}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Upload className="w-4 h-4" />
-            Upload CSV
-          </button>
-          <button
-            onClick={() => toast.info('Add tier functionality')}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-          >
-            <Plus className="w-4 h-4" />
-            Add Tier
-          </button>
-        </div>
-      </div>
+    <>
+      <style>{`
+        .price-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .price-title { font-size: 20px; font-weight: 600; color: #1f2937; }
+        .price-subtitle { color: #6b7280; margin-top: 4px; font-size: 14px; }
+        .price-header-actions { display: flex; gap: 8px; }
+        .price-btn { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; }
+        .price-btn-outline { border: 1px solid #e5e7eb; background: white; color: #374151; }
+        .price-btn-outline:hover { background: #f9fafb; }
+        .price-btn-blue { background: #2563eb; color: white; }
+        .price-btn-blue:hover { background: #1d4ed8; }
+        .price-btn-green { background: #16a34a; color: white; }
+        .price-btn-green:hover { background: #15803d; }
+        .price-filter-card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); padding: 16px; margin-bottom: 16px; }
+        .price-filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 768px) { .price-filter-grid { grid-template-columns: 1fr; } }
+        .price-filter-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 8px; color: #374151; }
+        .price-filter-select { width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: white; }
+        .price-tier-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+        .price-tier-pill { padding: 4px 12px; border-radius: 9999px; font-size: 13px; border: none; cursor: pointer; transition: all 0.15s; }
+        .price-tier-pill-active { background: #2563eb; color: white; }
+        .price-tier-pill-inactive { background: #f3f4f6; color: #6b7280; }
+        .price-tier-pill-inactive:hover { background: #e5e7eb; }
+        .price-table-card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow-x: auto; }
+        .price-table { width: 100%; border-collapse: collapse; }
+        .price-thead { background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .price-th { padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+        .price-th-sticky { position: sticky; left: 0; background: #f9fafb; z-index: 10; }
+        .price-th-sub { font-size: 10px; color: #9ca3af; text-transform: none; font-weight: 400; margin-top: 2px; }
+        .price-tbody tr { border-bottom: 1px solid #f3f4f6; transition: background 0.15s; }
+        .price-tbody tr:hover { background: #f9fafb; }
+        .price-td { padding: 12px 16px; }
+        .price-td-sticky { position: sticky; left: 0; background: white; }
+        .price-unit-badge { display: inline-block; padding: 2px 8px; background: #f3f4f6; font-size: 13px; border-radius: 4px; }
+        .price-td-cat { font-size: 13px; color: #6b7280; }
+        .price-value { font-size: 18px; color: #16a34a; }
+        .price-diff { font-size: 12px; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+        .price-diff-up { color: #dc2626; }
+        .price-diff-down { color: #16a34a; }
+        .price-diff-same { color: #6b7280; }
+        .price-empty { padding: 48px 24px; text-align: center; }
+        .price-empty-icon { width: 48px; height: 48px; background: #f9fafb; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
+        .price-empty-title { font-size: 15px; font-weight: 500; color: #111827; margin-bottom: 4px; }
+        .price-empty-text { max-width: 280px; margin: 0 auto; font-size: 13px; color: #9ca3af; }
+        .price-notes { margin-top: 16px; padding: 16px; background: #eff6ff; border-radius: 8px; }
+        .price-notes-title { font-size: 13px; font-weight: 500; margin-bottom: 8px; color: #1f2937; }
+        .price-notes-list { font-size: 13px; color: #374151; list-style: disc; padding-left: 20px; }
+        .price-notes-list li { margin-bottom: 4px; }
+      `}</style>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <div className="price-header">
           <div>
-            <label className="block text-sm mb-2">Filter by Category</label>
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
-            >
-              <option value="all">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
+            <h2 className="price-title">Pricing</h2>
+            <p className="price-subtitle">Manage pricing across different customer tiers</p>
           </div>
-          <div>
-            <label className="block text-sm mb-2">Select Tiers to Compare</label>
-            <div className="flex flex-wrap gap-2">
-              {priceTiers.map(tier => (
-                <button
-                  key={tier.id}
-                  onClick={() => toggleTierSelection(tier.id)}
-                  className={`px-3 py-1 rounded-full text-sm ${selectedTiers.includes(tier.id)
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                >
-                  {tier.name}
-                </button>
-              ))}
+          <div className="price-header-actions">
+            <button onClick={downloadCSV} className="price-btn price-btn-outline">
+              <Download style={{ width: 16, height: 16 }} /> Download CSV
+            </button>
+            <button onClick={() => toast.info('Upload CSV functionality')} className="price-btn price-btn-blue">
+              <Upload style={{ width: 16, height: 16 }} /> Upload CSV
+            </button>
+            <button onClick={() => toast.info('Add tier functionality')} className="price-btn price-btn-green">
+              <Plus style={{ width: 16, height: 16 }} /> Add Tier
+            </button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="price-filter-card">
+          <div className="price-filter-grid">
+            <div>
+              <label className="price-filter-label">Filter by Category</label>
+              <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="price-filter-select">
+                <option value="all">All Categories</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="price-filter-label">Select Tiers to Compare</label>
+              <div className="price-tier-pills">
+                {priceTiers.map(tier => (
+                  <button
+                    key={tier.id}
+                    onClick={() => toggleTierSelection(tier.id)}
+                    className={`price-tier-pill ${selectedTiers.includes(tier.id) ? 'price-tier-pill-active' : 'price-tier-pill-inactive'}`}
+                  >
+                    {tier.name}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Pricing Table */}
-      <div className="bg-white rounded-lg shadow overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">Item</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Unit</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
-              {displayTiers.map(tier => (
-                <th key={tier.id} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  {tier.name}
-                  {tier.id !== 't0' && <div className="text-[10px] text-gray-400 normal-case font-normal mt-0.5">vs Base</div>}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {filteredItems.map(item => {
-              const basePrice = getPriceForTier('t0', item.id);
-
-              return (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 sticky left-0 bg-white">
-                    {item.name}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="px-2 py-1 bg-gray-100 text-sm rounded">{item.unit.symbol}</span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {getCatName(item.categoryId)}
-                  </td>
-                  {displayTiers.map(tier => {
-                    const price = getPriceForTier(tier.id, item.id);
-                    const { diff, percent } = tier.id !== 't0'
-                      ? calculateDifference(basePrice, price)
-                      : { diff: 0, percent: 0 };
-
-                    return (
-                      <td key={tier.id} className="px-4 py-3">
-                        <div className="text-lg text-green-600">₹{price.toFixed(2)}</div>
-                        {tier.id !== 't0' && (
-                          <div className={`text-xs flex items-center gap-1 ${diff > 0 ? 'text-red-600' : diff < 0 ? 'text-green-600' : 'text-gray-600'
-                            }`}>
-                            {diff > 0 ? <TrendingUp className="w-3 h-3" /> : diff < 0 ? <TrendingDown className="w-3 h-3" /> : null}
-                            {diff !== 0 ? `₹${Math.abs(diff).toFixed(2)} (${percent > 0 ? '+' : ''}${percent.toFixed(1)}%)` : 'Same'}
-                          </div>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-            {filteredItems.length === 0 && (
+        {/* Pricing Table */}
+        <div className="price-table-card">
+          <table className="price-table">
+            <thead className="price-thead">
               <tr>
-                <td colSpan={3 + displayTiers.length} className="px-6 py-12 text-center text-gray-500 bg-white">
-                  <div className="flex flex-col items-center justify-center py-6">
-                    <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-                      <Search className="w-6 h-6 text-gray-400" />
-                    </div>
-                    <h3 className="text-md font-medium text-gray-900 mb-1">No Items Found</h3>
-                    <p className="max-w-xs text-sm text-gray-500">
-                      No items match your selected filters. Try changing the category or adding new items.
-                    </p>
-                  </div>
-                </td>
+                <th className="price-th price-th-sticky">Item</th>
+                <th className="price-th">Unit</th>
+                <th className="price-th">Category</th>
+                {displayTiers.map(tier => (
+                  <th key={tier.id} className="price-th">
+                    {tier.name}
+                    {tier.id !== 't0' && <div className="price-th-sub">vs Base</div>}
+                  </th>
+                ))}
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="price-tbody">
+              {filteredItems.map(item => {
+                const basePrice = getPriceForTier('t0', item.id);
 
-      <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-        <h4 className="text-sm mb-2">Notes:</h4>
-        <ul className="text-sm space-y-1 list-disc list-inside">
-          <li>Base Tier is the default pricing for all items</li>
-          <li>Price differences are shown as absolute value and percentage compared to Base Tier</li>
-          <li>Download CSV to get all pricing data or upload updated pricing</li>
-          <li>Select multiple tiers above to compare pricing side by side</li>
-        </ul>
+                return (
+                  <tr key={item.id}>
+                    <td className="price-td price-td-sticky">{item.name}</td>
+                    <td className="price-td">
+                      <span className="price-unit-badge">{item.unit.symbol}</span>
+                    </td>
+                    <td className="price-td price-td-cat">{getCatName(item.categoryId)}</td>
+                    {displayTiers.map(tier => {
+                      const price = getPriceForTier(tier.id, item.id);
+                      const { diff, percent } = tier.id !== 't0'
+                        ? calculateDifference(basePrice, price)
+                        : { diff: 0, percent: 0 };
+
+                      return (
+                        <td key={tier.id} className="price-td">
+                          <div className="price-value">₹{price.toFixed(2)}</div>
+                          {tier.id !== 't0' && (
+                            <div className={`price-diff ${diff > 0 ? 'price-diff-up' : diff < 0 ? 'price-diff-down' : 'price-diff-same'}`}>
+                              {diff > 0 ? <TrendingUp style={{ width: 12, height: 12 }} /> : diff < 0 ? <TrendingDown style={{ width: 12, height: 12 }} /> : null}
+                              {diff !== 0 ? `₹${Math.abs(diff).toFixed(2)} (${percent > 0 ? '+' : ''}${percent.toFixed(1)}%)` : 'Same'}
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+              {filteredItems.length === 0 && (
+                <tr>
+                  <td colSpan={3 + displayTiers.length} style={{ background: 'white' }}>
+                    <div className="price-empty">
+                      <div className="price-empty-icon">
+                        <Search style={{ width: 24, height: 24, color: '#9ca3af' }} />
+                      </div>
+                      <h3 className="price-empty-title">No Items Found</h3>
+                      <p className="price-empty-text">
+                        No items match your selected filters. Try changing the category or adding new items.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="price-notes">
+          <h4 className="price-notes-title">Notes:</h4>
+          <ul className="price-notes-list">
+            <li>Base Tier is the default pricing for all items</li>
+            <li>Price differences are shown as absolute value and percentage compared to Base Tier</li>
+            <li>Download CSV to get all pricing data or upload updated pricing</li>
+            <li>Select multiple tiers above to compare pricing side by side</li>
+          </ul>
+        </div>
       </div>
-    </div>
+    </>
   );
-
 }

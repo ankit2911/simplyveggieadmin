@@ -10,39 +10,24 @@ export function RoutesPageNew() {
   const { routes, customers, addRoute, updateRoute, bulkAssignRoute, removeCustomerFromRoute } = useAdmin();
   const [showForm, setShowForm] = useState(false);
   const [editingRoute, setEditingRoute] = useState<Route | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    code: '',
-    state: '',
-    city: '',
-  });
+  const [formData, setFormData] = useState({ name: '', code: '', state: '', city: '' });
   const [showCustomersModal, setShowCustomersModal] = useState<string | null>(null);
   const [showBulkAssign, setShowBulkAssign] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState('');
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
   const [assignTab, setAssignTab] = useState<AssignTab>('unassigned');
 
-  // For reassign modal
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [reassignFromRoute, setReassignFromRoute] = useState<string | null>(null);
   const [reassignToRoute, setReassignToRoute] = useState('');
   const [reassignCustomers, setReassignCustomers] = useState<Set<string>>(new Set());
 
-  // Derived data
-  const unassignedCustomers = useMemo(() =>
-    customers.filter(c => !c.routeId), [customers]);
-
-  const getRouteCustomers = (routeId: string) =>
-    customers.filter(c => c.routeId === routeId);
+  const unassignedCustomers = useMemo(() => customers.filter(c => !c.routeId), [customers]);
+  const getRouteCustomers = (routeId: string) => customers.filter(c => c.routeId === routeId);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    const route = {
-      ...formData,
-      customerIds: editingRoute?.customerIds || [],
-    };
-
+    const route = { ...formData, customerIds: editingRoute?.customerIds || [] };
     if (editingRoute) {
       updateRoute(editingRoute.id, route);
       toast.success('Route updated successfully');
@@ -61,12 +46,7 @@ export function RoutesPageNew() {
 
   const handleEdit = (route: Route) => {
     setEditingRoute(route);
-    setFormData({
-      name: route.name,
-      code: route.code,
-      city: route.city,
-      state: route.state,
-    });
+    setFormData({ name: route.name, code: route.code, city: route.city, state: route.state });
     setShowForm(true);
   };
 
@@ -75,7 +55,6 @@ export function RoutesPageNew() {
       toast.error('Please select a route and customers');
       return;
     }
-
     bulkAssignRoute(Array.from(selectedCustomers), selectedRoute);
     toast.success(`${selectedCustomers.size} customer(s) assigned to route`);
     setShowBulkAssign(false);
@@ -86,11 +65,7 @@ export function RoutesPageNew() {
 
   const toggleCustomer = (customerId: string, set: Set<string>, setFn: (s: Set<string>) => void) => {
     const newSelected = new Set(set);
-    if (newSelected.has(customerId)) {
-      newSelected.delete(customerId);
-    } else {
-      newSelected.add(customerId);
-    }
+    if (newSelected.has(customerId)) { newSelected.delete(customerId); } else { newSelected.add(customerId); }
     setFn(newSelected);
   };
 
@@ -100,10 +75,7 @@ export function RoutesPageNew() {
   };
 
   const handleReassign = () => {
-    if (!reassignToRoute || reassignCustomers.size === 0) {
-      toast.error('Select customers and target route');
-      return;
-    }
+    if (!reassignToRoute || reassignCustomers.size === 0) { toast.error('Select customers and target route'); return; }
     bulkAssignRoute(Array.from(reassignCustomers), reassignToRoute);
     toast.success(`${reassignCustomers.size} customer(s) reassigned`);
     setShowReassignModal(false);
@@ -124,418 +96,366 @@ export function RoutesPageNew() {
   const availableCities = formData.state ? CITIES_BY_STATE[formData.state] || [] : [];
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-semibold">Route Management</h2>
-          <p className="text-gray-600 mt-1">Manage delivery routes and customer assignments</p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowBulkAssign(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Users className="w-4 h-4" />
-            Bulk Assign
-          </button>
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-          >
-            <Plus className="w-4 h-4" />
-            Add Route
-          </button>
-        </div>
-      </div>
+    <>
+      <style>{`
+        .rt-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .rt-title { font-size: 20px; font-weight: 600; color: #1f2937; }
+        .rt-subtitle { color: #6b7280; margin-top: 4px; font-size: 14px; }
+        .rt-header-actions { display: flex; gap: 8px; }
+        .rt-btn { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; color: white; }
+        .rt-btn-blue { background: #2563eb; }
+        .rt-btn-blue:hover { background: #1d4ed8; }
+        .rt-btn-green { background: #16a34a; }
+        .rt-btn-green:hover { background: #15803d; }
+        .rt-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .rt-stat-card { background: white; padding: 16px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); border: 1px solid #e5e7eb; }
+        .rt-stat-value { font-size: 24px; font-weight: 700; }
+        .rt-stat-value-blue { color: #2563eb; }
+        .rt-stat-value-green { color: #16a34a; }
+        .rt-stat-value-orange { color: #ea580c; }
+        .rt-stat-value-gray { color: #6b7280; }
+        .rt-stat-label { font-size: 13px; color: #6b7280; }
+        .rt-table-card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden; }
+        .rt-table { width: 100%; border-collapse: collapse; }
+        .rt-thead { background: #f9fafb; }
+        .rt-th { padding: 12px 24px; text-align: left; font-size: 11px; font-weight: 500; color: #6b7280; text-transform: uppercase; }
+        .rt-tbody tr { border-bottom: 1px solid #f3f4f6; transition: background 0.15s; }
+        .rt-tbody tr:hover { background: #f9fafb; }
+        .rt-td { padding: 14px 24px; }
+        .rt-td-text { font-size: 13px; color: #6b7280; }
+        .rt-code-badge { display: inline-block; padding: 2px 8px; background: #dbeafe; color: #1e40af; border-radius: 4px; font-size: 13px; font-weight: 500; }
+        .rt-td-name { font-weight: 500; }
+        .rt-customers-btn { display: flex; align-items: center; gap: 8px; color: #2563eb; background: transparent; border: none; cursor: pointer; }
+        .rt-customers-btn:hover { color: #1d4ed8; }
+        .rt-customers-count { font-weight: 500; }
+        .rt-btn-edit { color: #2563eb; background: transparent; border: none; cursor: pointer; padding: 4px; }
+        .rt-btn-edit:hover { color: #1d4ed8; }
+        .rt-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; }
+        .rt-modal { background: white; border-radius: 12px; padding: 24px; max-width: 448px; width: 100%; margin: 16px; }
+        .rt-modal-lg { max-width: 672px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+        .rt-modal-title { font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1f2937; }
+        .rt-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .rt-modal-close { color: #9ca3af; cursor: pointer; background: none; border: none; }
+        .rt-modal-close:hover { color: #6b7280; }
+        .rt-form-group { margin-bottom: 16px; }
+        .rt-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 4px; color: #374151; }
+        .rt-input, .rt-select { width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; outline: none; background: white; }
+        .rt-input:focus, .rt-select:focus { box-shadow: 0 0 0 2px rgba(59,130,246,0.3); border-color: #3b82f6; }
+        .rt-modal-actions { display: flex; gap: 8px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+        .rt-btn-cancel { padding: 8px 16px; border: 1px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        .rt-btn-cancel:hover { background: #f9fafb; }
+        .rt-btn-save { padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 14px; }
+        .rt-btn-save:hover { background: #15803d; }
+        .rt-tabs { display: flex; gap: 8px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 8px; }
+        .rt-tab { padding: 8px 16px; border-radius: 8px 8px 0 0; font-weight: 500; transition: all 0.15s; border: none; cursor: pointer; font-size: 14px; }
+        .rt-tab-active { background: #dbeafe; color: #1d4ed8; border-bottom: 2px solid #2563eb; }
+        .rt-tab-inactive { background: transparent; color: #6b7280; }
+        .rt-tab-inactive:hover { color: #111827; }
+        .rt-customer-list { flex: 1; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; }
+        .rt-customer-empty { padding: 16px; text-align: center; color: #9ca3af; font-size: 14px; }
+        .rt-customer-item { display: flex; align-items: center; gap: 12px; padding: 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.15s; }
+        .rt-customer-item:hover { background: #f9fafb; }
+        .rt-customer-selected { background: #eff6ff; }
+        .rt-customer-selected-orange { background: #fff7ed; }
+        .rt-customer-info { flex: 1; }
+        .rt-customer-name { font-weight: 500; color: #111827; }
+        .rt-customer-phone { font-size: 13px; color: #9ca3af; }
+        .rt-customer-route-badge { font-size: 12px; padding: 2px 8px; background: #f3f4f6; color: #6b7280; border-radius: 4px; }
+        .rt-selection-info { display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+        .rt-selection-count { font-size: 13px; color: #6b7280; }
+        .rt-btn-assign { padding: 8px 16px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 14px; }
+        .rt-btn-assign:hover { background: #1d4ed8; }
+        .rt-btn-assign:disabled { opacity: 0.5; cursor: not-allowed; }
+        .rt-btn-orange { background: #ea580c; color: white; }
+        .rt-btn-orange:hover { background: #c2410c; }
+        .rt-detail-list { display: flex; flex-direction: column; gap: 8px; flex: 1; overflow-y: auto; }
+        .rt-detail-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; transition: background 0.15s; }
+        .rt-detail-item:hover { background: #f9fafb; }
+        .rt-detail-name { font-weight: 500; }
+        .rt-detail-contact { font-size: 13px; color: #6b7280; }
+        .rt-detail-empty { text-align: center; padding: 32px; color: #9ca3af; font-size: 14px; }
+        .rt-btn-remove { padding: 8px; color: #dc2626; background: transparent; border: none; cursor: pointer; border-radius: 8px; }
+        .rt-btn-remove:hover { background: #fef2f2; }
+        .rt-detail-footer { display: flex; gap: 8px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid #e5e7eb; margin-top: 16px; }
+        .rt-btn-reassign { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #ea580c; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 14px; }
+        .rt-btn-reassign:hover { background: #c2410c; }
+      `}</style>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <div className="text-2xl font-bold text-blue-600">{routes.length}</div>
-          <div className="text-sm text-gray-600">Total Routes</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <div className="text-2xl font-bold text-green-600">{customers.filter(c => c.routeId).length}</div>
-          <div className="text-sm text-gray-600">Assigned Customers</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <div className="text-2xl font-bold text-orange-600">{unassignedCustomers.length}</div>
-          <div className="text-sm text-gray-600">Unassigned Customers</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <div className="text-2xl font-bold text-gray-600">{customers.length}</div>
-          <div className="text-sm text-gray-600">Total Customers</div>
-        </div>
-      </div>
-
-      {/* Add/Edit Route Form */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-semibold mb-4">{editingRoute ? 'Edit' : 'Add'} Route</h3>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Route Name *</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="e.g., Mumbai Central"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Route Code *</label>
-                <input
-                  type="text"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="e.g., MUM01"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">State *</label>
-                <select
-                  value={formData.state}
-                  onChange={(e) => setFormData({ ...formData, state: e.target.value, city: '' })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  required
-                >
-                  <option value="">Select State</option>
-                  {INDIAN_STATES.map(state => (
-                    <option key={state} value={state}>{state}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">City *</label>
-                <select
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  required
-                  disabled={!formData.state}
-                >
-                  <option value="">Select City</option>
-                  {availableCities.map(city => (
-                    <option key={city} value={city}>{city}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex gap-2 justify-end pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                >
-                  {editingRoute ? 'Update' : 'Add'} Route
-                </button>
-              </div>
-            </form>
+      <div>
+        <div className="rt-header">
+          <div>
+            <h2 className="rt-title">Route Management</h2>
+            <p className="rt-subtitle">Manage delivery routes and customer assignments</p>
+          </div>
+          <div className="rt-header-actions">
+            <button onClick={() => setShowBulkAssign(true)} className="rt-btn rt-btn-blue">
+              <Users style={{ width: 16, height: 16 }} /> Bulk Assign
+            </button>
+            <button onClick={() => setShowForm(true)} className="rt-btn rt-btn-green">
+              <Plus style={{ width: 16, height: 16 }} /> Add Route
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Bulk Assign Modal */}
-      {showBulkAssign && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Bulk Assign Customers to Route</h3>
-              <button onClick={() => { setShowBulkAssign(false); setSelectedCustomers(new Set()); }} className="text-gray-500 hover:text-gray-700">
-                <X className="w-5 h-5" />
-              </button>
+        {/* Stats Cards */}
+        <div className="rt-stats">
+          <div className="rt-stat-card">
+            <div className="rt-stat-value rt-stat-value-blue">{routes.length}</div>
+            <div className="rt-stat-label">Total Routes</div>
+          </div>
+          <div className="rt-stat-card">
+            <div className="rt-stat-value rt-stat-value-green">{customers.filter(c => c.routeId).length}</div>
+            <div className="rt-stat-label">Assigned Customers</div>
+          </div>
+          <div className="rt-stat-card">
+            <div className="rt-stat-value rt-stat-value-orange">{unassignedCustomers.length}</div>
+            <div className="rt-stat-label">Unassigned Customers</div>
+          </div>
+          <div className="rt-stat-card">
+            <div className="rt-stat-value rt-stat-value-gray">{customers.length}</div>
+            <div className="rt-stat-label">Total Customers</div>
+          </div>
+        </div>
+
+        {/* Add/Edit Route Form */}
+        {showForm && (
+          <div className="rt-modal-backdrop">
+            <div className="rt-modal">
+              <h3 className="rt-modal-title">{editingRoute ? 'Edit' : 'Add'} Route</h3>
+              <form onSubmit={handleSubmit}>
+                <div className="rt-form-group">
+                  <label className="rt-label">Route Name *</label>
+                  <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="rt-input" placeholder="e.g., Mumbai Central" required />
+                </div>
+                <div className="rt-form-group">
+                  <label className="rt-label">Route Code *</label>
+                  <input type="text" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} className="rt-input" placeholder="e.g., MUM01" required />
+                </div>
+                <div className="rt-form-group">
+                  <label className="rt-label">State *</label>
+                  <select value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value, city: '' })} className="rt-select" required>
+                    <option value="">Select State</option>
+                    {INDIAN_STATES.map(state => (<option key={state} value={state}>{state}</option>))}
+                  </select>
+                </div>
+                <div className="rt-form-group">
+                  <label className="rt-label">City *</label>
+                  <select value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} className="rt-select" required disabled={!formData.state}>
+                    <option value="">Select City</option>
+                    {availableCities.map(city => (<option key={city} value={city}>{city}</option>))}
+                  </select>
+                </div>
+                <div className="rt-modal-actions">
+                  <button type="button" onClick={resetForm} className="rt-btn-cancel">Cancel</button>
+                  <button type="submit" className="rt-btn-save">{editingRoute ? 'Update' : 'Add'} Route</button>
+                </div>
+              </form>
             </div>
+          </div>
+        )}
 
-            <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
-              <div>
-                <label className="block text-sm font-medium mb-1">Select Route *</label>
-                <select
-                  value={selectedRoute}
-                  onChange={(e) => setSelectedRoute(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  required
-                >
-                  <option value="">Select Route</option>
-                  {routes.map(route => (
-                    <option key={route.id} value={route.id}>
-                      {route.name} ({route.code}) - {getRouteCustomers(route.id).length} customers
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Tabs */}
-              <div className="flex gap-2 border-b pb-2">
-                <button
-                  onClick={() => { setAssignTab('unassigned'); setSelectedCustomers(new Set()); }}
-                  className={`px-4 py-2 rounded-t-lg font-medium transition ${assignTab === 'unassigned' ? 'bg-blue-100 text-blue-700 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                >
-                  Unassigned ({unassignedCustomers.length})
-                </button>
-                <button
-                  onClick={() => { setAssignTab('all'); setSelectedCustomers(new Set()); }}
-                  className={`px-4 py-2 rounded-t-lg font-medium transition ${assignTab === 'all' ? 'bg-blue-100 text-blue-700 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                >
-                  All Customers ({customers.length})
+        {/* Bulk Assign Modal */}
+        {showBulkAssign && (
+          <div className="rt-modal-backdrop">
+            <div className="rt-modal rt-modal-lg">
+              <div className="rt-modal-header">
+                <h3 className="rt-modal-title" style={{ marginBottom: 0 }}>Bulk Assign Customers to Route</h3>
+                <button onClick={() => { setShowBulkAssign(false); setSelectedCustomers(new Set()); }} className="rt-modal-close">
+                  <X style={{ width: 20, height: 20 }} />
                 </button>
               </div>
 
-              {/* Customer List */}
-              <div className="flex-1 overflow-y-auto border rounded-lg">
-                {displayCustomers.length === 0 ? (
-                  <div className="p-4 text-center text-gray-500">
-                    {assignTab === 'unassigned' ? 'All customers are assigned to routes!' : 'No customers found'}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1, overflow: 'hidden' }}>
+                <div className="rt-form-group" style={{ marginBottom: 0 }}>
+                  <label className="rt-label">Select Route *</label>
+                  <select value={selectedRoute} onChange={(e) => setSelectedRoute(e.target.value)} className="rt-select" required>
+                    <option value="">Select Route</option>
+                    {routes.map(route => (<option key={route.id} value={route.id}>{route.name} ({route.code}) - {getRouteCustomers(route.id).length} customers</option>))}
+                  </select>
+                </div>
+
+                <div className="rt-tabs">
+                  <button onClick={() => { setAssignTab('unassigned'); setSelectedCustomers(new Set()); }} className={`rt-tab ${assignTab === 'unassigned' ? 'rt-tab-active' : 'rt-tab-inactive'}`}>
+                    Unassigned ({unassignedCustomers.length})
+                  </button>
+                  <button onClick={() => { setAssignTab('all'); setSelectedCustomers(new Set()); }} className={`rt-tab ${assignTab === 'all' ? 'rt-tab-active' : 'rt-tab-inactive'}`}>
+                    All Customers ({customers.length})
+                  </button>
+                </div>
+
+                <div className="rt-customer-list">
+                  {displayCustomers.length === 0 ? (
+                    <div className="rt-customer-empty">
+                      {assignTab === 'unassigned' ? 'All customers are assigned to routes!' : 'No customers found'}
+                    </div>
+                  ) : (
+                    <div>
+                      {displayCustomers.map(customer => {
+                        const currentRoute = routes.find(r => r.id === customer.routeId);
+                        return (
+                          <label key={customer.id} className={`rt-customer-item ${selectedCustomers.has(customer.id) ? 'rt-customer-selected' : ''}`}>
+                            <input type="checkbox" checked={selectedCustomers.has(customer.id)} onChange={() => toggleCustomer(customer.id, selectedCustomers, setSelectedCustomers)} style={{ accentColor: '#2563eb' }} />
+                            <div className="rt-customer-info">
+                              <div className="rt-customer-name">{customer.businessName}</div>
+                              <div className="rt-customer-phone">{customer.phone}</div>
+                            </div>
+                            {currentRoute && (<span className="rt-customer-route-badge">{currentRoute.code}</span>)}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="rt-selection-info">
+                  <div className="rt-selection-count">{selectedCustomers.size} customer(s) selected</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => { setShowBulkAssign(false); setSelectedCustomers(new Set()); setAssignTab('unassigned'); }} className="rt-btn-cancel">Cancel</button>
+                    <button onClick={handleBulkAssign} disabled={selectedCustomers.size === 0 || !selectedRoute} className="rt-btn-assign">
+                      Assign {selectedCustomers.size} Customer(s)
+                    </button>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Customers List Modal */}
+        {showCustomersModal && (
+          <div className="rt-modal-backdrop">
+            <div className="rt-modal rt-modal-lg">
+              <div className="rt-modal-header">
+                <h3 className="rt-modal-title" style={{ marginBottom: 0 }}>
+                  Customers in {routes.find(r => r.id === showCustomersModal)?.name}
+                </h3>
+                <button onClick={() => setShowCustomersModal(null)} className="rt-modal-close">
+                  <X style={{ width: 20, height: 20 }} />
+                </button>
+              </div>
+
+              <div className="rt-detail-list">
+                {getRouteCustomers(showCustomersModal).length === 0 ? (
+                  <div className="rt-detail-empty">No customers in this route</div>
                 ) : (
-                  <div className="divide-y">
-                    {displayCustomers.map(customer => {
-                      const currentRoute = routes.find(r => r.id === customer.routeId);
-                      return (
-                        <label
-                          key={customer.id}
-                          className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 ${selectedCustomers.has(customer.id) ? 'bg-blue-50' : ''
-                            }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedCustomers.has(customer.id)}
-                            onChange={() => toggleCustomer(customer.id, selectedCustomers, setSelectedCustomers)}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <div className="flex-1">
-                            <div className="font-medium">{customer.businessName}</div>
-                            <div className="text-sm text-gray-500">{customer.phone}</div>
-                          </div>
-                          {currentRoute && (
-                            <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
-                              {currentRoute.code}
-                            </span>
-                          )}
-                        </label>
-                      );
-                    })}
-                  </div>
+                  getRouteCustomers(showCustomersModal).map(customer => (
+                    <div key={customer.id} className="rt-detail-item">
+                      <div>
+                        <div className="rt-detail-name">{customer.businessName}</div>
+                        <div className="rt-detail-contact">{customer.phone} • {customer.email}</div>
+                      </div>
+                      <button onClick={() => handleRemoveFromRoute(customer.id)} className="rt-btn-remove" title="Remove from route">
+                        <Trash2 style={{ width: 16, height: 16 }} />
+                      </button>
+                    </div>
+                  ))
                 )}
               </div>
 
-              <div className="flex gap-2 justify-between pt-4 border-t">
-                <div className="text-sm text-gray-600">
-                  {selectedCustomers.size} customer(s) selected
+              <div className="rt-detail-footer">
+                <button onClick={() => openReassignModal(showCustomersModal)} className="rt-btn-reassign">
+                  <ArrowRight style={{ width: 16, height: 16 }} /> Reassign to Another Route
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reassign Modal */}
+        {showReassignModal && reassignFromRoute && (
+          <div className="rt-modal-backdrop">
+            <div className="rt-modal rt-modal-lg">
+              <div className="rt-modal-header">
+                <h3 className="rt-modal-title" style={{ marginBottom: 0 }}>
+                  Reassign from {routes.find(r => r.id === reassignFromRoute)?.name}
+                </h3>
+                <button onClick={() => setShowReassignModal(false)} className="rt-modal-close">
+                  <X style={{ width: 20, height: 20 }} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1, overflow: 'hidden' }}>
+                <div className="rt-form-group" style={{ marginBottom: 0 }}>
+                  <label className="rt-label">Target Route *</label>
+                  <select value={reassignToRoute} onChange={(e) => setReassignToRoute(e.target.value)} className="rt-select">
+                    <option value="">Select Target Route</option>
+                    {routes.filter(r => r.id !== reassignFromRoute).map(route => (
+                      <option key={route.id} value={route.id}>{route.name} ({route.code})</option>
+                    ))}
+                  </select>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { setShowBulkAssign(false); setSelectedCustomers(new Set()); setAssignTab('unassigned'); }}
-                    className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleBulkAssign}
-                    disabled={selectedCustomers.size === 0 || !selectedRoute}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Assign {selectedCustomers.size} Customer(s)
-                  </button>
+
+                <div className="rt-customer-list">
+                  <div>
+                    {getRouteCustomers(reassignFromRoute).map(customer => (
+                      <label key={customer.id} className={`rt-customer-item ${reassignCustomers.has(customer.id) ? 'rt-customer-selected-orange' : ''}`}>
+                        <input type="checkbox" checked={reassignCustomers.has(customer.id)} onChange={() => toggleCustomer(customer.id, reassignCustomers, setReassignCustomers)} style={{ accentColor: '#ea580c' }} />
+                        <div className="rt-customer-info">
+                          <div className="rt-customer-name">{customer.businessName}</div>
+                          <div className="rt-customer-phone">{customer.phone}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rt-selection-info">
+                  <div className="rt-selection-count">{reassignCustomers.size} customer(s) selected</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => setShowReassignModal(false)} className="rt-btn-cancel">Cancel</button>
+                    <button onClick={handleReassign} disabled={reassignCustomers.size === 0 || !reassignToRoute} className="rt-btn-assign" style={{ background: '#ea580c' }}>
+                      Reassign {reassignCustomers.size} Customer(s)
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Customers List Modal (with remove/reassign) */}
-      {showCustomersModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">
-                Customers in {routes.find(r => r.id === showCustomersModal)?.name}
-              </h3>
-              <button onClick={() => setShowCustomersModal(null)} className="text-gray-500 hover:text-gray-700">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              {getRouteCustomers(showCustomersModal).length === 0 ? (
-                <div className="text-center py-8 text-gray-500">No customers in this route</div>
-              ) : (
-                <div className="space-y-2">
-                  {getRouteCustomers(showCustomersModal).map(customer => (
-                    <div key={customer.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                      <div>
-                        <div className="font-medium">{customer.businessName}</div>
-                        <div className="text-sm text-gray-600">{customer.phone} • {customer.email}</div>
-                      </div>
-                      <button
-                        onClick={() => handleRemoveFromRoute(customer.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                        title="Remove from route"
-                      >
-                        <Trash2 className="w-4 h-4" />
+        {/* Routes Table */}
+        <div className="rt-table-card">
+          <table className="rt-table">
+            <thead className="rt-thead">
+              <tr>
+                <th className="rt-th">Route Code</th>
+                <th className="rt-th">Route Name</th>
+                <th className="rt-th">City</th>
+                <th className="rt-th">State</th>
+                <th className="rt-th"># Customers</th>
+                <th className="rt-th">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="rt-tbody">
+              {routes.map((route) => {
+                const routeCustomers = getRouteCustomers(route.id);
+                return (
+                  <tr key={route.id}>
+                    <td className="rt-td">
+                      <span className="rt-code-badge">{route.code}</span>
+                    </td>
+                    <td className="rt-td rt-td-name">{route.name}</td>
+                    <td className="rt-td rt-td-text">{route.city}</td>
+                    <td className="rt-td rt-td-text">{route.state}</td>
+                    <td className="rt-td">
+                      <button onClick={() => setShowCustomersModal(route.id)} className="rt-customers-btn">
+                        <Users style={{ width: 16, height: 16 }} />
+                        <span className="rt-customers-count">{routeCustomers.length}</span>
+                        <Eye style={{ width: 12, height: 12 }} />
                       </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2 justify-end pt-4 border-t mt-4">
-              <button
-                onClick={() => openReassignModal(showCustomersModal)}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
-              >
-                <ArrowRight className="w-4 h-4" />
-                Reassign to Another Route
-              </button>
-            </div>
-          </div>
+                    </td>
+                    <td className="rt-td">
+                      <button onClick={() => handleEdit(route)} className="rt-btn-edit">
+                        <Edit2 style={{ width: 16, height: 16 }} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-      )}
-
-      {/* Reassign Modal */}
-      {showReassignModal && reassignFromRoute && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">
-                Reassign from {routes.find(r => r.id === reassignFromRoute)?.name}
-              </h3>
-              <button onClick={() => setShowReassignModal(false)} className="text-gray-500 hover:text-gray-700">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
-              <div>
-                <label className="block text-sm font-medium mb-1">Target Route *</label>
-                <select
-                  value={reassignToRoute}
-                  onChange={(e) => setReassignToRoute(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                >
-                  <option value="">Select Target Route</option>
-                  {routes.filter(r => r.id !== reassignFromRoute).map(route => (
-                    <option key={route.id} value={route.id}>
-                      {route.name} ({route.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex-1 overflow-y-auto border rounded-lg">
-                <div className="divide-y">
-                  {getRouteCustomers(reassignFromRoute).map(customer => (
-                    <label
-                      key={customer.id}
-                      className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 ${reassignCustomers.has(customer.id) ? 'bg-orange-50' : ''
-                        }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={reassignCustomers.has(customer.id)}
-                        onChange={() => toggleCustomer(customer.id, reassignCustomers, setReassignCustomers)}
-                        className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-                      />
-                      <div className="flex-1">
-                        <div className="font-medium">{customer.businessName}</div>
-                        <div className="text-sm text-gray-500">{customer.phone}</div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-2 justify-between pt-4 border-t">
-                <div className="text-sm text-gray-600">
-                  {reassignCustomers.size} customer(s) selected
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowReassignModal(false)}
-                    className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleReassign}
-                    disabled={reassignCustomers.size === 0 || !reassignToRoute}
-                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
-                  >
-                    Reassign {reassignCustomers.size} Customer(s)
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Routes Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Route Code</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Route Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">City</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">State</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"># Customers</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {routes.map((route) => {
-              const routeCustomers = getRouteCustomers(route.id);
-
-              return (
-                <tr key={route.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm font-medium">
-                      {route.code}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 font-medium">{route.name}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{route.city}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{route.state}</td>
-                  <td className="px-6 py-4">
-                    <button
-                      onClick={() => setShowCustomersModal(route.id)}
-                      className="flex items-center gap-2 text-blue-600 hover:text-blue-700"
-                    >
-                      <Users className="w-4 h-4" />
-                      <span className="font-medium">{routeCustomers.length}</span>
-                      <Eye className="w-3 h-3" />
-                    </button>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button
-                      onClick={() => handleEdit(route)}
-                      className="text-blue-600 hover:text-blue-700 p-1"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
       </div>
-    </div>
+    </>
   );
 }

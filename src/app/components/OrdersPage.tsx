@@ -8,14 +8,13 @@ import { toast } from 'sonner';
 
 const workflowSteps: OrderStatus[] = ['Created', 'Accepted', 'Processing', 'Packed', 'Dispatched', 'Delivered'];
 
-// Color Mapping for Tabs (unchanged)
-const tabColors: Record<OrderStatus, { active: string; inactive: string; badge: string; border: string }> = {
-  Created: { active: 'bg-gray-700 text-white', inactive: 'bg-gray-100 text-gray-600 hover:bg-gray-200', badge: 'bg-gray-500 text-white', border: 'border-gray-700' },
-  Accepted: { active: 'bg-blue-600 text-white', inactive: 'bg-blue-50 text-blue-600 hover:bg-blue-100', badge: 'bg-blue-500 text-white', border: 'border-blue-600' },
-  Processing: { active: 'bg-amber-500 text-white', inactive: 'bg-amber-50 text-amber-600 hover:bg-amber-100', badge: 'bg-amber-600 text-white', border: 'border-amber-500' },
-  Packed: { active: 'bg-purple-600 text-white', inactive: 'bg-purple-50 text-purple-600 hover:bg-purple-100', badge: 'bg-purple-500 text-white', border: 'border-purple-600' },
-  Dispatched: { active: 'bg-indigo-600 text-white', inactive: 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100', badge: 'bg-indigo-500 text-white', border: 'border-indigo-600' },
-  Delivered: { active: 'bg-green-600 text-white', inactive: 'bg-green-50 text-green-600 hover:bg-green-100', badge: 'bg-green-500 text-white', border: 'border-green-600' },
+const tabColorMap: Record<OrderStatus, { activeBg: string; activeTxt: string; inactiveBg: string; inactiveTxt: string; hoverBg: string; badgeBg: string; border: string }> = {
+  Created: { activeBg: '#374151', activeTxt: '#fff', inactiveBg: '#f3f4f6', inactiveTxt: '#6b7280', hoverBg: '#e5e7eb', badgeBg: '#6b7280', border: '#374151' },
+  Accepted: { activeBg: '#2563eb', activeTxt: '#fff', inactiveBg: '#eff6ff', inactiveTxt: '#2563eb', hoverBg: '#dbeafe', badgeBg: '#3b82f6', border: '#2563eb' },
+  Processing: { activeBg: '#f59e0b', activeTxt: '#fff', inactiveBg: '#fffbeb', inactiveTxt: '#d97706', hoverBg: '#fef3c7', badgeBg: '#d97706', border: '#f59e0b' },
+  Packed: { activeBg: '#7c3aed', activeTxt: '#fff', inactiveBg: '#f5f3ff', inactiveTxt: '#7c3aed', hoverBg: '#ede9fe', badgeBg: '#8b5cf6', border: '#7c3aed' },
+  Dispatched: { activeBg: '#4f46e5', activeTxt: '#fff', inactiveBg: '#eef2ff', inactiveTxt: '#4f46e5', hoverBg: '#e0e7ff', badgeBg: '#6366f1', border: '#4f46e5' },
+  Delivered: { activeBg: '#16a34a', activeTxt: '#fff', inactiveBg: '#f0fdf4', inactiveTxt: '#16a34a', hoverBg: '#dcfce7', badgeBg: '#22c55e', border: '#16a34a' },
 };
 
 export function OrdersPage() {
@@ -120,280 +119,675 @@ export function OrdersPage() {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800">Order Processing</h2>
-      </div>
+    <>
+      <style>{`
+        .ord-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 24px;
+        }
+        .ord-title {
+          font-size: 20px;
+          font-weight: 600;
+          color: #1f2937;
+        }
+        .ord-tabs {
+          display: flex;
+          overflow-x: auto;
+          gap: 8px;
+          margin-bottom: 24px;
+          padding-bottom: 4px;
+          border-bottom: 2px solid;
+        }
+        .ord-tab {
+          padding: 8px 16px;
+          white-space: nowrap;
+          font-size: 13px;
+          font-weight: 500;
+          border-radius: 8px 8px 0 0;
+          border: none;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .ord-tab-badge {
+          margin-left: 8px;
+          padding: 2px 6px;
+          border-radius: 9999px;
+          font-size: 11px;
+          opacity: 0.9;
+        }
+        .ord-table-card {
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+          border: 1px solid #f3f4f6;
+          overflow: hidden;
+          min-height: 400px;
+        }
+        .ord-empty {
+          padding: 48px;
+          text-align: center;
+          color: #9ca3af;
+          font-size: 14px;
+        }
+        .ord-scroll {
+          overflow-x: auto;
+          padding-bottom: 96px;
+        }
+        .ord-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .ord-thead {
+          background: #f9fafb;
+          border-bottom: 1px solid #f3f4f6;
+        }
+        .ord-th {
+          padding: 14px 24px;
+          text-align: left;
+          font-size: 11px;
+          font-weight: 600;
+          color: #6b7280;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        .ord-tbody tr {
+          border-bottom: 1px solid #f3f4f6;
+          transition: background 0.15s;
+        }
+        .ord-tbody tr:hover {
+          background: #f9fafb;
+        }
+        .ord-td {
+          padding: 14px 24px;
+        }
+        .ord-td-id {
+          font-weight: 500;
+          color: #111827;
+        }
+        .ord-td-customer {
+          color: #1f2937;
+        }
+        .ord-customer-name {
+          font-weight: 500;
+        }
+        .ord-customer-attn {
+          font-size: 12px;
+          color: #6b7280;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          margin-top: 2px;
+        }
+        .ord-attn-label {
+          background: #f3f4f6;
+          padding: 1px 6px;
+          border-radius: 4px;
+          color: #6b7280;
+          font-size: 11px;
+        }
+        .ord-customer-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .ord-td-date {
+          color: #6b7280;
+          font-size: 13px;
+        }
+        .ord-td-items {
+          color: #6b7280;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .ord-td-total {
+          font-weight: 700;
+          color: #111827;
+        }
+        .ord-badge-invoice {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 2px 10px;
+          border-radius: 9999px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+        .ord-badge-yes {
+          background: #dcfce7;
+          color: #166534;
+        }
+        .ord-badge-pending {
+          background: #fff7ed;
+          color: #c2410c;
+        }
+        .ord-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .ord-btn-icon {
+          padding: 8px;
+          color: #9ca3af;
+          background: transparent;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .ord-btn-icon:hover {
+          color: #2563eb;
+          background: #eff6ff;
+        }
+        .ord-btn-action {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 6px 12px;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .ord-btn-green { background: #16a34a; }
+        .ord-btn-green:hover { background: #15803d; }
+        .ord-btn-blue { background: #2563eb; }
+        .ord-btn-blue:hover { background: #1d4ed8; }
+        .ord-btn-purple { background: #7c3aed; }
+        .ord-btn-purple:hover { background: #6d28d9; }
+        .ord-btn-orange { background: #ea580c; }
+        .ord-btn-orange:hover { background: #c2410c; }
+        .ord-btn-outline-orange {
+          background: transparent;
+          border: 1px solid #fed7aa;
+          color: #c2410c;
+        }
+        .ord-btn-outline-orange:hover {
+          background: #fff7ed;
+        }
+        .ord-btn-outline-gray {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 6px 12px;
+          background: transparent;
+          border: 1px solid #e5e7eb;
+          color: #374151;
+          border-radius: 8px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+        }
+        .ord-btn-outline-gray:hover {
+          background: #f9fafb;
+        }
+        .ord-info-btn {
+          color: #9ca3af;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          transition: color 0.15s;
+        }
+        .ord-info-btn:hover {
+          color: #2563eb;
+        }
+        .ord-popover {
+          position: absolute;
+          left: 0;
+          top: 100%;
+          margin-top: 8px;
+          width: 256px;
+          background: white;
+          border-radius: 8px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+          border: 1px solid #e5e7eb;
+          z-index: 50;
+          padding: 16px;
+          font-size: 13px;
+        }
+        .ord-popover-title {
+          font-weight: 500;
+          color: #111827;
+          margin-bottom: 8px;
+          padding-bottom: 4px;
+          border-bottom: 1px solid #f3f4f6;
+        }
+        .ord-popover-body {
+          color: #6b7280;
+        }
+        .ord-popover-body p {
+          margin: 4px 0;
+        }
+        .ord-popover-attn {
+          font-weight: 500;
+          color: #1f2937;
+        }
+        .ord-popover-landmark {
+          font-size: 12px;
+          color: #9ca3af;
+        }
+        .ord-popover-close {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          color: #9ca3af;
+          background: none;
+          border: none;
+          cursor: pointer;
+        }
+        .ord-popover-close:hover {
+          color: #6b7280;
+        }
+        .ord-modal-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.5);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 50;
+          padding: 16px;
+        }
+        .ord-modal {
+          background: white;
+          border-radius: 16px;
+          box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+          width: 100%;
+          max-width: 672px;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          max-height: 90vh;
+        }
+        .ord-modal-header {
+          padding: 16px 24px;
+          border-bottom: 1px solid #f3f4f6;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: #f9fafb;
+        }
+        .ord-modal-title {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1f2937;
+        }
+        .ord-modal-subtitle {
+          font-size: 13px;
+          color: #9ca3af;
+        }
+        .ord-modal-close {
+          color: #9ca3af;
+          cursor: pointer;
+          background: none;
+          border: none;
+          font-size: 18px;
+        }
+        .ord-modal-close:hover {
+          color: #6b7280;
+        }
+        .ord-modal-body {
+          overflow-y: auto;
+          padding: 24px;
+        }
+        .ord-detail-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .ord-detail-thead {
+          background: #f9fafb;
+        }
+        .ord-detail-th {
+          padding: 12px 16px;
+          text-align: left;
+          font-size: 11px;
+          font-weight: 600;
+          color: #6b7280;
+          text-transform: uppercase;
+        }
+        .ord-detail-th-right {
+          text-align: right;
+        }
+        .ord-detail-tbody tr {
+          border-bottom: 1px solid #f9fafb;
+        }
+        .ord-detail-td {
+          padding: 12px 16px;
+        }
+        .ord-detail-td-name {
+          font-weight: 500;
+          color: #111827;
+        }
+        .ord-detail-td-text {
+          color: #6b7280;
+        }
+        .ord-detail-td-right {
+          text-align: right;
+          color: #6b7280;
+        }
+        .ord-detail-delivered {
+          color: #111827;
+          font-weight: 500;
+        }
+        .ord-detail-input {
+          width: 96px;
+          padding: 4px 8px;
+          border: 1px solid #e5e7eb;
+          border-radius: 4px;
+          text-align: center;
+          outline: none;
+        }
+        .ord-detail-input:focus {
+          box-shadow: 0 0 0 2px rgba(59,130,246,0.3);
+          border-color: #3b82f6;
+        }
+        .ord-detail-total {
+          background: #f9fafb;
+          font-weight: 600;
+        }
+        .ord-detail-total td {
+          padding: 12px 16px;
+        }
+        .ord-modal-footer {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: 24px;
+          gap: 12px;
+          padding-top: 16px;
+          border-top: 1px solid #f3f4f6;
+        }
+        .ord-btn-close {
+          padding: 8px 16px;
+          color: #6b7280;
+          background: transparent;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 14px;
+        }
+        .ord-btn-close:hover {
+          background: #f9fafb;
+        }
+        .ord-btn-save {
+          padding: 8px 24px;
+          background: #2563eb;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-weight: 500;
+          cursor: pointer;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+          font-size: 14px;
+        }
+        .ord-btn-save:hover {
+          background: #1d4ed8;
+        }
+      `}</style>
 
-      {/* Tabs */}
-      <div className={`flex overflow-x-auto gap-2 mb-6 border-b-2 pb-1 ${tabColors[activeTab].border}`}>
-        {workflowSteps.map(step => (
-          <button
-            key={step}
-            onClick={() => setActiveTab(step)}
-            className={`px-4 py-2 whitespace-nowrap text-sm font-medium rounded-t-lg transition-all ${activeTab === step ? tabColors[step].active : tabColors[step].inactive
-              }`}
-          >
-            {step}
-            <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs opacity-90 ${activeTab === step ? 'bg-white/20' : tabColors[step].badge
-              }`}>
-              {orders.filter(o => o.status === step).length}
-            </span>
-          </button>
-        ))}
-      </div>
+      <div>
+        <div className="ord-header">
+          <h2 className="ord-title">Order Processing</h2>
+        </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">
-        {filteredOrders.length === 0 ? (
-          <div className="p-12 text-center text-gray-500">
-            No orders in {activeTab} stage.
-          </div>
-        ) : (
-          <div className="overflow-x-auto pb-24"> {/* Added padding bottom for popovers */}
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Order ID</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Items</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Invoice</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filteredOrders.map(order => {
-                  const custDetails = getCustomerDetails(order.customerId);
-                  const isAddressOpen = viewingAddressId === order.id;
+        {/* Tabs */}
+        <div className="ord-tabs" style={{ borderColor: tabColorMap[activeTab].border }}>
+          {workflowSteps.map(step => {
+            const colors = tabColorMap[step];
+            const isActive = activeTab === step;
+            return (
+              <button
+                key={step}
+                onClick={() => setActiveTab(step)}
+                className="ord-tab"
+                style={{
+                  background: isActive ? colors.activeBg : colors.inactiveBg,
+                  color: isActive ? colors.activeTxt : colors.inactiveTxt,
+                }}
+              >
+                {step}
+                <span className="ord-tab-badge" style={{
+                  background: isActive ? 'rgba(255,255,255,0.2)' : colors.badgeBg,
+                  color: isActive ? colors.activeTxt : '#fff',
+                }}>
+                  {orders.filter(o => o.status === step).length}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-                  return (
-                    <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-gray-900">{order.id}</td>
-                      <td className="px-6 py-4 text-gray-800 relative group">
-                        <div className="flex items-center gap-2">
-                          <div>
-                            <div className="font-medium">{order.customerName}</div>
-                            {custDetails?.attention && (
-                              <div className="text-xs text-gray-500 flex items-center gap-1">
-                                <span className="bg-gray-100 px-1.5 rounded text-gray-600">Attn:</span>
-                                {custDetails.attention}
-                              </div>
-                            )}
-                          </div>
+        <div className="ord-table-card">
+          {filteredOrders.length === 0 ? (
+            <div className="ord-empty">
+              No orders in {activeTab} stage.
+            </div>
+          ) : (
+            <div className="ord-scroll">
+              <table className="ord-table">
+                <thead className="ord-thead">
+                  <tr>
+                    <th className="ord-th">Order ID</th>
+                    <th className="ord-th">Customer</th>
+                    <th className="ord-th">Date</th>
+                    <th className="ord-th">Items</th>
+                    <th className="ord-th">Total</th>
+                    <th className="ord-th">Invoice</th>
+                    <th className="ord-th">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="ord-tbody">
+                  {filteredOrders.map(order => {
+                    const custDetails = getCustomerDetails(order.customerId);
+                    const isAddressOpen = viewingAddressId === order.id;
 
-                          {/* Address Info Button */}
-                          <div className="relative">
-                            <button
-                              onClick={() => setViewingAddressId(isAddressOpen ? null : order.id)}
-                              className="text-gray-400 hover:text-blue-600 transition-colors"
-                              title="View Shipping Address"
-                            >
-                              <Info className="w-4 h-4" />
-                            </button>
-
-                            {/* Address Popover */}
-                            {isAddressOpen && custDetails?.shippingAddr && (
-                              <div className="absolute left-0 top-full mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50 p-4 text-sm">
-                                <h4 className="font-medium text-gray-900 mb-2 border-b pb-1">Shipping Address</h4>
-                                <div className="space-y-1 text-gray-600">
-                                  {custDetails.shippingAddr.attention && <p className="font-medium text-gray-800">{custDetails.shippingAddr.attention}</p>}
-                                  <p>{custDetails.shippingAddr.street}</p>
-                                  {custDetails.shippingAddr.landmark && <p className="text-xs text-gray-500">Landmark: {custDetails.shippingAddr.landmark}</p>}
-                                  <p>{custDetails.shippingAddr.city}, {custDetails.shippingAddr.state}</p>
-                                  <p>{custDetails.shippingAddr.zipCode}</p>
+                    return (
+                      <tr key={order.id}>
+                        <td className="ord-td ord-td-id">{order.id}</td>
+                        <td className="ord-td ord-td-customer" style={{ position: 'relative' }}>
+                          <div className="ord-customer-row">
+                            <div>
+                              <div className="ord-customer-name">{order.customerName}</div>
+                              {custDetails?.attention && (
+                                <div className="ord-customer-attn">
+                                  <span className="ord-attn-label">Attn:</span>
+                                  {custDetails.attention}
                                 </div>
+                              )}
+                            </div>
+
+                            {/* Address Info Button */}
+                            <div style={{ position: 'relative' }}>
+                              <button
+                                onClick={() => setViewingAddressId(isAddressOpen ? null : order.id)}
+                                className="ord-info-btn"
+                                title="View Shipping Address"
+                              >
+                                <Info style={{ width: 16, height: 16 }} />
+                              </button>
+
+                              {/* Address Popover */}
+                              {isAddressOpen && custDetails?.shippingAddr && (
+                                <div className="ord-popover">
+                                  <h4 className="ord-popover-title">Shipping Address</h4>
+                                  <div className="ord-popover-body">
+                                    {custDetails.shippingAddr.attention && <p className="ord-popover-attn">{custDetails.shippingAddr.attention}</p>}
+                                    <p>{custDetails.shippingAddr.street}</p>
+                                    {custDetails.shippingAddr.landmark && <p className="ord-popover-landmark">Landmark: {custDetails.shippingAddr.landmark}</p>}
+                                    <p>{custDetails.shippingAddr.city}, {custDetails.shippingAddr.state}</p>
+                                    <p>{custDetails.shippingAddr.zipCode}</p>
+                                  </div>
+                                  <button
+                                    onClick={() => setViewingAddressId(null)}
+                                    className="ord-popover-close"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="ord-td ord-td-date">{new Date(order.createdAt).toLocaleDateString()}</td>
+                        <td className="ord-td ord-td-items">
+                          <Box style={{ width: 16, height: 16, color: '#9ca3af' }} />
+                          {order.items.length} Items
+                        </td>
+                        <td className="ord-td ord-td-total">₹{order.totalAmount.toFixed(2)}</td>
+                        <td className="ord-td">
+                          {order.invoiceDate ? (
+                            <span className="ord-badge-invoice ord-badge-yes">
+                              <CheckCircle style={{ width: 12, height: 12 }} /> Yes ({new Date(order.invoiceDate).toLocaleDateString()})
+                            </span>
+                          ) : (
+                            <span className="ord-badge-invoice ord-badge-pending">
+                              Pending
+                            </span>
+                          )}
+                        </td>
+                        <td className="ord-td">
+                          <div className="ord-actions">
+                            <button
+                              onClick={() => openEditModal(order)}
+                              className="ord-btn-icon"
+                              title="View Details"
+                            >
+                              {activeTab === 'Processing' ? <Edit3 style={{ width: 16, height: 16 }} /> : <Eye style={{ width: 16, height: 16 }} />}
+                            </button>
+
+                            {/* CREATED Actions */}
+                            {activeTab === 'Created' && (
+                              <button onClick={() => handleAcceptOrder(order.id)} className="ord-btn-action ord-btn-green">
+                                <Check style={{ width: 14, height: 14 }} /> Accept
+                              </button>
+                            )}
+
+                            {/* ACCEPTED Actions */}
+                            {activeTab === 'Accepted' && (
+                              <button onClick={() => handlePrintPickList(order)} className="ord-btn-action ord-btn-blue">
+                                <Printer style={{ width: 14, height: 14 }} /> Pick List
+                              </button>
+                            )}
+
+                            {/* PROCESSING Actions */}
+                            {activeTab === 'Processing' && (
+                              <button onClick={() => handleMarkPacked(order)} className="ord-btn-action ord-btn-purple">
+                                <Box style={{ width: 14, height: 14 }} /> Pack
+                              </button>
+                            )}
+
+                            {/* PACKED Actions */}
+                            {activeTab === 'Packed' && (
+                              <>
                                 <button
-                                  onClick={() => setViewingAddressId(null)}
-                                  className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+                                  onClick={() => handleGenerateInvoice(order)}
+                                  className={`ord-btn-action ${order.invoiceDate ? 'ord-btn-outline-orange' : 'ord-btn-orange'}`}
                                 >
-                                  ✕
+                                  <FileText style={{ width: 14, height: 14 }} />
+                                  {order.invoiceDate ? 'Update Inv' : 'Create Inv'}
                                 </button>
-                              </div>
+                                <button onClick={() => handleDispatch(order)} className="ord-btn-outline-gray">
+                                  <Truck style={{ width: 14, height: 14 }} /> Dispatch
+                                </button>
+                              </>
+                            )}
+
+                            {/* DISPATCHED Actions */}
+                            {activeTab === 'Dispatched' && (
+                              <button onClick={() => handleDeliver(order.id)} className="ord-btn-action ord-btn-green">
+                                <CheckCircle style={{ width: 14, height: 14 }} /> Delivered
+                              </button>
                             )}
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-gray-600 text-sm">{new Date(order.createdAt).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <Box className="w-4 h-4 text-gray-400" />
-                          {order.items.length} Items
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 font-bold text-gray-900">₹{order.totalAmount.toFixed(2)}</td>
-                      <td className="px-6 py-4">
-                        {order.invoiceDate ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            <CheckCircle className="w-3 h-3" /> Yes ({new Date(order.invoiceDate).toLocaleDateString()})
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-                            Pending
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => openEditModal(order)}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="View Details"
-                          >
-                            {activeTab === 'Processing' ? <Edit3 className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
 
-                          {/* CREATED Actions */}
-                          {activeTab === 'Created' && (
-                            <button
-                              onClick={() => handleAcceptOrder(order.id)}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs font-medium shadow-sm"
-                            >
-                              <Check className="w-3.5 h-3.5" /> Accept
-                            </button>
-                          )}
+        {/* Detail / Edit Modal */}
+        {editingOrder && (
+          <div className="ord-modal-backdrop">
+            <div className="ord-modal">
+              <div className="ord-modal-header">
+                <div>
+                  <h3 className="ord-modal-title">Order Details: {editingOrder.id}</h3>
+                  <p className="ord-modal-subtitle">{editingOrder.customerName}</p>
+                </div>
+                <button onClick={() => setEditingOrder(null)} className="ord-modal-close">✕</button>
+              </div>
 
-                          {/* ACCEPTED Actions */}
-                          {activeTab === 'Accepted' && (
-                            <button
-                              onClick={() => handlePrintPickList(order)}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium shadow-sm"
-                            >
-                              <Printer className="w-3.5 h-3.5" /> Pick List
-                            </button>
+              <div className="ord-modal-body">
+                <table className="ord-detail-table">
+                  <thead className="ord-detail-thead">
+                    <tr>
+                      <th className="ord-detail-th">Item</th>
+                      <th className="ord-detail-th">Pack Size</th>
+                      <th className="ord-detail-th">Ordered</th>
+                      <th className="ord-detail-th">
+                        {activeTab === 'Processing' ? 'Delivered (Act)' : 'Delivered'}
+                      </th>
+                      <th className="ord-detail-th ord-detail-th-right">Price/Unit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {editingOrder.items.map((item) => (
+                      <tr key={item.id} style={{ borderBottom: '1px solid #f9fafb' }}>
+                        <td className="ord-detail-td ord-detail-td-name">{item.itemName}</td>
+                        <td className="ord-detail-td ord-detail-td-text">{item.packSize}</td>
+                        <td className="ord-detail-td ord-detail-td-text">{item.orderedQuantity}</td>
+                        <td className="ord-detail-td">
+                          {activeTab === 'Processing' ? (
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={item.deliveredQuantity}
+                              onChange={(e) => updateItemActual(item.id, parseFloat(e.target.value) || 0)}
+                              className="ord-detail-input"
+                            />
+                          ) : (
+                            <span className="ord-detail-delivered">
+                              {item.deliveredQuantity !== undefined ? item.deliveredQuantity : '-'}
+                            </span>
                           )}
-
-                          {/* PROCESSING Actions */}
-                          {activeTab === 'Processing' && (
-                            <button
-                              onClick={() => handleMarkPacked(order)}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-xs font-medium shadow-sm"
-                            >
-                              <Box className="w-3.5 h-3.5" /> Pack
-                            </button>
-                          )}
-
-                          {/* PACKED Actions */}
-                          {activeTab === 'Packed' && (
-                            <>
-                              <button
-                                onClick={() => handleGenerateInvoice(order)}
-                                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm ${order.invoiceDate
-                                  ? 'border border-orange-200 text-orange-700 hover:bg-orange-50'
-                                  : 'bg-orange-600 text-white hover:bg-orange-700'
-                                  }`}
-                              >
-                                <FileText className="w-3.5 h-3.5" />
-                                {order.invoiceDate ? 'Update Inv' : 'Create Inv'}
-                              </button>
-                              <button
-                                onClick={() => handleDispatch(order)}
-                                className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-medium"
-                              >
-                                <Truck className="w-3.5 h-3.5" /> Dispatch
-                              </button>
-                            </>
-                          )}
-
-                          {/* DISPATCHED Actions */}
-                          {activeTab === 'Dispatched' && (
-                            <button
-                              onClick={() => handleDeliver(order.id)}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs font-medium"
-                            >
-                              <CheckCircle className="w-3.5 h-3.5" /> Delivered
-                            </button>
-                          )}
-                        </div>
+                        </td>
+                        <td className="ord-detail-td ord-detail-td-right">₹{item.pricePerUnit}</td>
+                      </tr>
+                    ))}
+                    <tr className="ord-detail-total">
+                      <td colSpan={4} style={{ textAlign: 'right' }}>Total</td>
+                      <td style={{ textAlign: 'right' }}>
+                        ₹{editingOrder.items.reduce((sum, item) => sum + ((item.deliveredQuantity ?? item.orderedQuantity) * item.pricePerUnit), 0).toFixed(2)}
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </tbody>
+                </table>
+
+                <div className="ord-modal-footer">
+                  <button onClick={() => setEditingOrder(null)} className="ord-btn-close">
+                    Close
+                  </button>
+                  {activeTab === 'Processing' && (
+                    <button onClick={saveActuals} className="ord-btn-save">
+                      Save Changes
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
-
-      {/* Detail / Edit Modal (Unchanged) */}
-      {editingOrder && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800">Order Details: {editingOrder.id}</h3>
-                <p className="text-sm text-gray-500">{editingOrder.customerName}</p>
-              </div>
-              <button onClick={() => setEditingOrder(null)} className="text-gray-400 hover:text-gray-600">✕</button>
-            </div>
-
-            <div className="overflow-y-auto p-6">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Item</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Pack Size</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Ordered</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
-                      {activeTab === 'Processing' ? 'Delivered (Act)' : 'Delivered'}
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Price/Unit</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {editingOrder.items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-3 font-medium text-gray-900">{item.itemName}</td>
-                      <td className="px-4 py-3 text-gray-600">{item.packSize}</td>
-                      <td className="px-4 py-3 text-gray-600">{item.orderedQuantity}</td>
-                      <td className="px-4 py-3">
-                        {activeTab === 'Processing' ? (
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={item.deliveredQuantity}
-                            onChange={(e) => updateItemActual(item.id, parseFloat(e.target.value) || 0)}
-                            className="w-24 px-2 py-1 border border-gray-200 rounded text-center focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        ) : (
-                          <span className="text-gray-900 font-medium">
-                            {item.deliveredQuantity !== undefined ? item.deliveredQuantity : '-'}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-600">₹{item.pricePerUnit}</td>
-                    </tr>
-                  ))}
-                  <tr className="bg-gray-50 font-semibold">
-                    <td colSpan={4} className="px-4 py-3 text-right">Total</td>
-                    <td className="px-4 py-3 text-right">
-                      ₹{editingOrder.items.reduce((sum, item) => sum + ((item.deliveredQuantity ?? item.orderedQuantity) * item.pricePerUnit), 0).toFixed(2)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <div className="flex justify-end mt-6 gap-3 pt-4 border-t border-gray-100">
-                <button
-                  onClick={() => setEditingOrder(null)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
-                >
-                  Close
-                </button>
-                {activeTab === 'Processing' && (
-                  <button
-                    onClick={saveActuals}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm"
-                  >
-                    Save Changes
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 }

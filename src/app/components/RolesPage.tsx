@@ -16,7 +16,7 @@ export function RolesPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     addEmployeeRole({
       name: roleData.name,
       permissions: {
@@ -47,139 +47,159 @@ export function RolesPage() {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl">Employee Roles</h2>
-          <p className="text-gray-600 mt-1">Manage employee roles and permissions</p>
-        </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-        >
-          <Plus className="w-4 h-4" />
-          Add Role
-        </button>
-      </div>
+    <>
+      <style>{`
+        .role-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .role-title { font-size: 20px; font-weight: 600; color: #1f2937; }
+        .role-subtitle { color: #6b7280; margin-top: 4px; font-size: 14px; }
+        .role-btn-add { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #16a34a; color: white; border-radius: 8px; border: none; cursor: pointer; font-weight: 500; font-size: 14px; }
+        .role-btn-add:hover { background: #15803d; }
+        .role-table-card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden; }
+        .role-table { width: 100%; border-collapse: collapse; }
+        .role-thead { background: #f9fafb; }
+        .role-th { padding: 12px 24px; text-align: left; font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600; }
+        .role-tbody tr { border-bottom: 1px solid #f3f4f6; transition: background 0.15s; }
+        .role-tbody tr:hover { background: #f9fafb; }
+        .role-td { padding: 14px 24px; }
+        .role-badge { display: inline-flex; padding: 2px 8px; border-radius: 9999px; font-size: 12px; font-weight: 500; }
+        .role-badge-green { background: #dcfce7; color: #166534; }
+        .role-badge-red { background: #fee2e2; color: #991b1b; }
+        .role-module-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+        .role-module-badge { padding: 2px 8px; background: #dbeafe; color: #1e40af; font-size: 12px; border-radius: 4px; }
+        .role-count { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .role-btn-edit { color: #2563eb; background: transparent; border: none; cursor: pointer; }
+        .role-btn-edit:hover { color: #1d4ed8; }
+        .role-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; }
+        .role-modal { background: white; border-radius: 12px; padding: 24px; max-width: 448px; width: 100%; margin: 16px; }
+        .role-modal-title { font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1f2937; }
+        .role-form-group { margin-bottom: 16px; }
+        .role-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 4px; color: #374151; }
+        .role-input { width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; outline: none; }
+        .role-input:focus { box-shadow: 0 0 0 2px rgba(59,130,246,0.3); border-color: #3b82f6; }
+        .role-checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .role-checkbox-text { font-size: 13px; color: #374151; }
+        .role-modules-list { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; max-height: 256px; overflow-y: auto; }
+        .role-module-checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 8px; }
+        .role-module-checkbox:last-child { margin-bottom: 0; }
+        .role-module-name { font-size: 13px; text-transform: capitalize; color: #374151; }
+        .role-modal-actions { display: flex; gap: 8px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+        .role-btn-cancel { padding: 8px 16px; border: 1px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        .role-btn-cancel:hover { background: #f9fafb; }
+        .role-btn-save { padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 14px; }
+        .role-btn-save:hover { background: #15803d; }
+      `}</style>
 
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl mb-4">Add Employee Role</h3>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm mb-1">Role Name *</label>
-                <input
-                  type="text"
-                  value={roleData.name}
-                  onChange={(e) => setRoleData({ ...roleData, name: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="e.g., Warehouse Manager"
-                  required
-                />
-              </div>
-              <div>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={roleData.appAccess}
-                    onChange={(e) => setRoleData({ ...roleData, appAccess: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span className="text-sm">App Access</span>
-                </label>
-              </div>
-              <div>
-                <label className="block text-sm mb-2">Module Access *</label>
-                <div className="space-y-2 border rounded-lg p-3 max-h-64 overflow-y-auto">
-                  {modules.map(module => (
-                    <label key={module} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={roleData.modules.includes(module)}
-                        onChange={() => toggleModule(module)}
-                        className="rounded"
-                      />
-                      <span className="text-sm capitalize">{module}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-2 justify-end pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                >
-                  Add Role
-                </button>
-              </div>
-            </form>
+      <div>
+        <div className="role-header">
+          <div>
+            <h2 className="role-title">Employee Roles</h2>
+            <p className="role-subtitle">Manage employee roles and permissions</p>
           </div>
+          <button onClick={() => setShowForm(true)} className="role-btn-add">
+            <Plus style={{ width: 16, height: 16 }} /> Add Role
+          </button>
         </div>
-      )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase">Role Name</th>
-              <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase">App Access</th>
-              <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase">Module Permissions</th>
-              <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase"># Active Users</th>
-              <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {employeeRoles.map(role => {
-              const userCount = getEmployeeCount(role.id);
-              
-              return (
-                <tr key={role.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">{role.name}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      role.permissions.appAccess 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {role.permissions.appAccess ? 'Yes' : 'No'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {role.permissions.modules.map(module => (
-                        <span key={module} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                          {module}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm">{userCount}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button className="text-blue-600 hover:text-blue-700">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {showForm && (
+          <div className="role-modal-backdrop">
+            <div className="role-modal">
+              <h3 className="role-modal-title">Add Employee Role</h3>
+
+              <form onSubmit={handleSubmit}>
+                <div className="role-form-group">
+                  <label className="role-label">Role Name *</label>
+                  <input
+                    type="text"
+                    value={roleData.name}
+                    onChange={(e) => setRoleData({ ...roleData, name: e.target.value })}
+                    className="role-input"
+                    placeholder="e.g., Warehouse Manager"
+                    required
+                  />
+                </div>
+                <div className="role-form-group">
+                  <label className="role-checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={roleData.appAccess}
+                      onChange={(e) => setRoleData({ ...roleData, appAccess: e.target.checked })}
+                    />
+                    <span className="role-checkbox-text">App Access</span>
+                  </label>
+                </div>
+                <div className="role-form-group">
+                  <label className="role-label">Module Access *</label>
+                  <div className="role-modules-list">
+                    {modules.map(module => (
+                      <label key={module} className="role-module-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={roleData.modules.includes(module)}
+                          onChange={() => toggleModule(module)}
+                        />
+                        <span className="role-module-name">{module}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="role-modal-actions">
+                  <button type="button" onClick={resetForm} className="role-btn-cancel">Cancel</button>
+                  <button type="submit" className="role-btn-save">Add Role</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        <div className="role-table-card">
+          <table className="role-table">
+            <thead className="role-thead">
+              <tr>
+                <th className="role-th">Role Name</th>
+                <th className="role-th">App Access</th>
+                <th className="role-th">Module Permissions</th>
+                <th className="role-th"># Active Users</th>
+                <th className="role-th">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="role-tbody">
+              {employeeRoles.map(role => {
+                const userCount = getEmployeeCount(role.id);
+
+                return (
+                  <tr key={role.id}>
+                    <td className="role-td">{role.name}</td>
+                    <td className="role-td">
+                      <span className={`role-badge ${role.permissions.appAccess ? 'role-badge-green' : 'role-badge-red'}`}>
+                        {role.permissions.appAccess ? 'Yes' : 'No'}
+                      </span>
+                    </td>
+                    <td className="role-td">
+                      <div className="role-module-badges">
+                        {role.permissions.modules.map(module => (
+                          <span key={module} className="role-module-badge">{module}</span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="role-td">
+                      <div className="role-count">
+                        <Users style={{ width: 16, height: 16, color: '#9ca3af' }} />
+                        <span>{userCount}</span>
+                      </div>
+                    </td>
+                    <td className="role-td">
+                      <button className="role-btn-edit">
+                        <Edit2 style={{ width: 16, height: 16 }} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
