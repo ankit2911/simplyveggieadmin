@@ -1,4 +1,4 @@
-// File: /Users/agrank/Stuffs/ai_projects/simply_veggie/svadmin_old/src/app/api/categories/route.ts
+// File: /Users/agrank/Stuffs/ai_projects/simply_veggie/svadmin/src/app/api/categories/route.ts
 import * as entry from '../../../../../src/app/api/categories/route.js'
 import type { NextRequest } from 'next/server.js'
 

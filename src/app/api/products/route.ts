@@ -133,3 +133,24 @@ export async function PUT(request: Request) {
         return NextResponse.json({ error: "Failed to update" }, { status: 500 });
     }
 }
+
+export async function DELETE(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+        if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
+
+        await prisma.$transaction(async (tx) => {
+            await tx.inventoryAdjustment.deleteMany({ where: { productId: id } });
+            await tx.inventory.deleteMany({ where: { productId: id } });
+            await tx.productVariant.deleteMany({ where: { productId: id } });
+            await tx.product.delete({ where: { id } });
+        });
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        if (error.code === 'P2003') {
+            return NextResponse.json({ error: 'Cannot delete Product because it is still linked to existing Orders or Inventory.' }, { status: 400 });
+        }
+        return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 });
+    }
+}

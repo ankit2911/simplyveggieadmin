@@ -26,19 +26,46 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
-const tabs = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/' },
-  { id: 'orders', label: 'Live Orders', icon: ShoppingCart, href: '/orders' },
-  { id: 'inventory', label: 'Inventory (Stock)', icon: Package, href: '/inventory' },
-  { id: 'items', label: 'Item Definitions', icon: Box, href: '/items' },
-  { id: 'pricing', label: 'Pricing', icon: DollarSign, href: '/pricing' },
-  { id: 'customers', label: 'Customers', icon: Users, href: '/customers' },
-  { id: 'routes', label: 'Routes', icon: MapPin, href: '/routes' },
-  { id: 'employees', label: 'Employees', icon: Briefcase, href: '/employees' },
-  { id: 'configuration', label: 'Configuration', icon: Settings, href: '/configuration' },
-  { id: 'pricingTiers', label: 'Pricing Tiers', icon: Layers, href: '/pricingTiers' },
-  { id: 'wallets', label: 'Wallets', icon: Wallet, href: '/wallets' },
+const navGroups = [
+  {
+    title: 'Overview',
+    items: [
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/' }
+    ]
+  },
+  {
+    title: 'Sales & Orders',
+    items: [
+      { id: 'orders', label: 'Live Orders', icon: ShoppingCart, href: '/orders' },
+      { id: 'pricing', label: 'Pricing', icon: DollarSign, href: '/pricing' },
+      { id: 'pricingTiers', label: 'Pricing Tiers', icon: Layers, href: '/pricingTiers' },
+      { id: 'wallets', label: 'Wallets', icon: Wallet, href: '/wallets' }
+    ]
+  },
+  {
+    title: 'Inventory',
+    items: [
+      { id: 'inventory', label: 'Inventory (Stock)', icon: Package, href: '/inventory' },
+      { id: 'items', label: 'Item Definitions', icon: Box, href: '/items' }
+    ]
+  },
+  {
+    title: 'Users & Logistics',
+    items: [
+      { id: 'customers', label: 'Customers', icon: Users, href: '/customers' },
+      { id: 'employees', label: 'Employees', icon: Briefcase, href: '/employees' },
+      { id: 'routes', label: 'Routes', icon: MapPin, href: '/routes' }
+    ]
+  },
+  {
+    title: 'System',
+    items: [
+      { id: 'configuration', label: 'Configuration', icon: Settings, href: '/configuration' }
+    ]
+  }
 ];
+
+const allTabs = navGroups.flatMap(group => group.items);
 
 export function AppShell({ children }: LayoutProps) {
   const { logout: onLogout, isAuthenticated, login, currentUser, hasPermission } = useAdmin();
@@ -135,6 +162,15 @@ export function AppShell({ children }: LayoutProps) {
           flex: 1;
           overflow-y: auto;
           padding: 12px 8px;
+        }
+        .nav-section-title {
+          font-size: 11px;
+          font-weight: 700;
+          color: #9ca3af;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+          margin: 16px 8px 8px 8px;
+          padding: 0 8px;
         }
         .nav-item {
           display: flex;
@@ -340,22 +376,33 @@ export function AppShell({ children }: LayoutProps) {
           </div>
 
           <nav className="nav-section">
-            {tabs.filter(tab => hasPermission(tab.id) || hasPermission('all')).map((tab) => {
-              const Icon = tab.icon;
-              const active = isActive(tab.href);
+            {navGroups.map((group, groupIndex) => {
+              const visibleItems = group.items.filter(tab => hasPermission(tab.id) || hasPermission('all'));
+              
+              if (visibleItems.length === 0) return null;
 
               return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    router.push(tab.href);
-                    setSidebarOpen(false);
-                  }}
-                  className={`nav-item ${active ? 'active' : ''}`}
-                >
-                  <Icon />
-                  <span>{tab.label}</span>
-                </button>
+                <div key={`group-${groupIndex}`}>
+                  <div className="nav-section-title">{group.title}</div>
+                  {visibleItems.map((tab) => {
+                    const Icon = tab.icon;
+                    const active = isActive(tab.href);
+
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          router.push(tab.href);
+                          setSidebarOpen(false);
+                        }}
+                        className={`nav-item ${active ? 'active' : ''}`}
+                      >
+                        <Icon />
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               );
             })}
           </nav>
@@ -388,7 +435,7 @@ export function AppShell({ children }: LayoutProps) {
                 <Menu size={20} color="#666" />
               </button>
               <h1 className="page-title">
-                {tabs.find(t => isActive(t.href))?.label || 'Dashboard'}
+                {allTabs.find(t => isActive(t.href))?.label || 'Dashboard'}
               </h1>
             </div>
           </header>

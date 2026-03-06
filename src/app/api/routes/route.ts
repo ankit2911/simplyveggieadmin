@@ -26,7 +26,7 @@ export async function POST(request: Request) {
         });
         return NextResponse.json(route);
     } catch (error) {
-        return NextResponse.json({ error: 'Failed to create route' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to create route', details: String(error) }, { status: 500 });
     }
 }
 
@@ -52,7 +52,10 @@ export async function DELETE(request: Request) {
 
         await prisma.route.delete({ where: { id } });
         return NextResponse.json({ success: true });
-    } catch (error) {
+    } catch (error: any) {
+        if (error.code === 'P2003') {
+            return NextResponse.json({ error: 'Cannot delete Route because it is still linked to existing Customers.' }, { status: 400 });
+        }
         return NextResponse.json({ error: 'Failed to delete route' }, { status: 500 });
     }
 }

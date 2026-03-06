@@ -17,7 +17,6 @@ export async function POST(request: Request) {
                     customerId,
                     status: status || 'Created',
                     totalAmount: Number(totalAmount),
-                    invoiceDate: invoiceDate ? new Date(invoiceDate) : null,
                     items: {
                         create: await Promise.all(items.map(async (item: any) => {
                             // Calculate orderedQtyBase
@@ -46,7 +45,8 @@ export async function POST(request: Request) {
             });
 
             // 2. Deduct Inventory
-            for (const item of order.items) {
+            const createdItems = (order as any).items || [];
+            for (const item of createdItems) {
                 if (item.orderedQtyBase > 0) {
                     await tx.inventory.upsert({
                         where: { productId: item.productId },
@@ -70,5 +70,36 @@ export async function POST(request: Request) {
     } catch (error) {
         console.error('Failed to create order:', error);
         return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    }
+}
+
+export async function GET() {
+    try {
+        const orders = await prisma.order.findMany({
+            include: { items: true },
+            orderBy: { createdAt: 'desc' }
+        });
+        return NextResponse.json(orders);
+    } catch (error) {
+        return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+        if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
+
+        await prisma.$transaction(async (tx) => {
+            await tx.orderItem.deleteMany({ where: { orderId: id } });
+            await tx.order.delete({ where: { id } });
+        });
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        if (error.code === 'P2003') {
+            return NextResponse.json({ error: 'Cannot delete Order due to dependent records.' }, { status: 400 });
+        }
+        return NextResponse.json({ error: 'Failed to delete order' }, { status: 500 });
     }
 }

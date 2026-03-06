@@ -44,7 +44,10 @@ export async function DELETE(request: Request) {
 
         await prisma.unit.delete({ where: { id } });
         return NextResponse.json({ success: true });
-    } catch (error) {
+    } catch (error: any) {
+        if (error.code === 'P2003') {
+            return NextResponse.json({ error: 'Cannot delete Unit because it is still linked to existing Products.' }, { status: 400 });
+        }
         return NextResponse.json({ error: 'Failed to delete unit' }, { status: 500 });
     }
 }

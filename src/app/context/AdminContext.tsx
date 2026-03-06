@@ -614,10 +614,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const updateCategory = (id: string, updates: Partial<Category>) => { toast.info("Update not implemented yet"); };
   const deleteCategory = async (id: string) => {
     try {
-      await fetch(`/api/categories?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/categories?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete category");
+      }
       fetchMasters();
       toast.success("Category deleted");
-    } catch (e) { toast.error("Failed to delete category"); }
+    } catch (e: any) { toast.error(e.message || "Failed to delete category"); }
   };
 
   const addSubcategory = async (sub: Omit<Subcategory, 'id'>) => {
@@ -629,10 +633,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const updateSubcategory = (id: string, updates: Partial<Subcategory>) => { toast.info("Update not implemented yet"); };
   const deleteSubcategory = async (id: string) => {
     try {
-      await fetch(`/api/subcategories?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/subcategories?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete subcategory");
+      }
       fetchMasters();
       toast.success("Subcategory deleted");
-    } catch (e) { toast.error("Failed to delete subcategory"); }
+    } catch (e: any) { toast.error(e.message || "Failed to delete subcategory"); }
   };
 
   const addUnit = async (unit: Omit<Unit, 'id'>) => {
@@ -644,10 +652,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const updateUnit = (id: string, updates: Partial<Unit>) => { toast.info("Update not implemented yet"); };
   const deleteUnit = async (id: string) => {
     try {
-      await fetch(`/api/units?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/units?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete unit");
+      }
       fetchMasters();
       toast.success("Unit deleted");
-    } catch (e) { toast.error("Failed to delete unit"); }
+    } catch (e: any) { toast.error(e.message || "Failed to delete unit"); }
   };
 
   const addPriceTier = (tier: Omit<PriceTier, 'id'>) => setPriceTiers([...priceTiers, { ...tier, id: `t${Date.now()}` }]);
@@ -694,10 +706,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   };
   const deleteEmployee = async (id: string) => {
     try {
-      await fetch(`/api/employees?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/employees?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete employee");
+      }
       fetchMasters();
       toast.success("Employee deleted");
-    } catch (e) { toast.error("Failed to delete employee"); }
+    } catch (e: any) { toast.error(e.message || "Failed to delete employee"); }
   };
 
   const addEmployeeRole = async (role: any) => {
@@ -733,10 +749,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const deleteRoute = async (id: string) => {
     try {
-      await fetch(`/api/routes?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/routes?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete route");
+      }
       fetchMasters();
       toast.success("Route deleted");
-    } catch (e) { toast.error("Failed to delete route"); }
+    } catch (e: any) { toast.error(e.message || "Failed to delete route"); }
   };
 
   const updateWebsiteLinks = (links: Partial<WebsiteLinks>) => setWebsiteLinks({ ...websiteLinks, ...links });

@@ -6,6 +6,11 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
+    "/(admin)/pricing/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(admin)/pricing/page.js"
+    ],
     "/(admin)/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -16,40 +21,45 @@
       "static/chunks/main-app.js",
       "static/chunks/app/(admin)/inventory/page.js"
     ],
-    "/(admin)/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(admin)/page.js"
-    ],
     "/(admin)/orders/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(admin)/orders/page.js"
     ],
-    "/(admin)/pricing/page": [
+    "/(admin)/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(admin)/pricing/page.js"
+      "static/chunks/app/(admin)/page.js"
     ],
     "/(admin)/items/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(admin)/items/page.js"
     ],
-    "/(admin)/routes/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(admin)/routes/page.js"
-    ],
     "/(admin)/configuration/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(admin)/configuration/page.js"
     ],
+    "/(admin)/routes/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(admin)/routes/page.js"
+    ],
+    "/(admin)/employees/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(admin)/employees/page.js"
+    ],
     "/(admin)/customers/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(admin)/customers/page.js"
+    ],
+    "/(admin)/pricingTiers/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(admin)/pricingTiers/page.js"
     ]
   }
 }

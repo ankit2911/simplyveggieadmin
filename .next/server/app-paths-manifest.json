@@ -1,8 +1,15 @@
 {
+  "/api/categories/route": "app/api/categories/route.js",
+  "/api/units/route": "app/api/units/route.js",
+  "/api/employees/route": "app/api/employees/route.js",
+  "/api/subcategories/route": "app/api/subcategories/route.js",
+  "/api/roles/route": "app/api/roles/route.js",
+  "/api/routes/route": "app/api/routes/route.js",
   "/(admin)/items/page": "app/(admin)/items/page.js",
-  "/(admin)/pricing/page": "app/(admin)/pricing/page.js",
-  "/(admin)/routes/page": "app/(admin)/routes/page.js",
   "/(admin)/inventory/page": "app/(admin)/inventory/page.js",
+  "/(admin)/configuration/page": "app/(admin)/configuration/page.js",
+  "/(admin)/routes/page": "app/(admin)/routes/page.js",
+  "/(admin)/employees/page": "app/(admin)/employees/page.js",
   "/(admin)/customers/page": "app/(admin)/customers/page.js",
-  "/(admin)/configuration/page": "app/(admin)/configuration/page.js"
+  "/(admin)/pricingTiers/page": "app/(admin)/pricingTiers/page.js"
 }

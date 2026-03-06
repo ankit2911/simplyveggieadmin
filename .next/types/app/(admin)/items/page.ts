@@ -1,4 +1,4 @@
-// File: /Users/agrank/Stuffs/ai_projects/simply_veggie/svadmin_old/src/app/(admin)/items/page.tsx
+// File: /Users/agrank/Stuffs/ai_projects/simply_veggie/svadmin/src/app/(admin)/items/page.tsx
 import * as entry from '../../../../../src/app/(admin)/items/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
